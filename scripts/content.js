@@ -79,7 +79,7 @@ const rulesPromise = loadRulesFast().then((rules) => {
 // Basic rule scoring and block action.
 // This is a lightweight early pass; the full DetectionEngine runs later.
 async function startDetection(rules) {
-  if (await isTrustedOrigin(location.origin.toLowerCase())) return;
+  if (await isTrustedOrigin(urlOrigin(location.origin))) return;
   if (!rules) return;
   try {
     const html = document.documentElement.outerHTML;
