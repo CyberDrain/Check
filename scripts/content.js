@@ -482,7 +482,7 @@ class CheckContent {
       if (!o) continue;
       origins.add(o);
       // If all assets are on the same fake origin, this may yield 0 — that's fine.
-      if (!trustedOrigins.has(o) && o !== origin) nonMs.add(o);
+      if (!(await isTrustedOrigin(o)) && o !== origin) nonMs.add(o);
     }
 
     return {
