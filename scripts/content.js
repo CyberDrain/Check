@@ -432,7 +432,7 @@ class CheckContent {
       if (!hasPw) continue;
       const act = this.resolveAction(f.getAttribute("action"));
       const actOrigin = urlOrigin(act);
-      if (!trustedOrigins.has(actOrigin)) bad.push({ action: actOrigin });
+      if (!(await isTrustedOrigin(actOrigin))) bad.push({ action: actOrigin });
     }
 
     if (bad.length)
