@@ -10,6 +10,14 @@
 
 import logger from "./utils/logger.js";
 
+chrome.runtime.sendMessage({ type: "ping" }, (response) => {
+  if (chrome.runtime.lastError) {
+    logger.warn("Check: Background ping failed:", chrome.runtime.lastError.message);
+  } else {
+    logger.log("Check: Background ping response:", response);
+  }
+});
+
 // CyberDrain integration - Precomputed Microsoft login origins
 const DEFAULT_TRUSTED_ORIGINS = [
   "https://login.microsoftonline.com",
