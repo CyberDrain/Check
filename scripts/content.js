@@ -21,7 +21,7 @@
       info: (...args) => console.info("[logger fallback]", ...args),
       log: (...args) => console.log("[logger fallback]", ...args),
     };
-    console.error("Failed to import logger module:", err);
+    logger.error("Failed to import logger module:", err);
   }
   chrome.runtime.sendMessage({ type: "ping" }, (response) => {
     if (chrome.runtime.lastError) {
