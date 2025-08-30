@@ -32,7 +32,15 @@ function urlOrigin(u) {
 }
 
 async function ensureRulesLoaded() {
-  if (!rulesLoaded) await rulesPromise;
+  if (!rulesLoaded) {
+    try {
+      await rulesPromise;
+    } catch (err) {
+      logger.error("Failed to load detection rules, falling back to defaults.", err);
+      trustedOrigins = new Set(DEFAULT_TRUSTED_ORIGINS);
+      rulesLoaded = true;
+    }
+  }
 }
 
 async function isTrustedOrigin(u) {
