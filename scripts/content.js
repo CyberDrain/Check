@@ -10,15 +10,8 @@
 
 import logger from "./utils/logger.js";
 
-// CyberDrain integration - Trusted origins
-const TRUSTED_ORIGINS = new Set([
-  "https://login.microsoftonline.com",
-  "https://login.microsoft.com",
-  "https://login.windows.net",
-  "https://login.microsoftonline.us",
-  "https://login.partner.microsoftonline.cn",
-  "https://login.live.com"
-]);
+// CyberDrain integration - Trusted origins are loaded dynamically from rules
+let trustedOrigins = new Set();
 
 function urlOrigin(u) {
   try {
@@ -29,11 +22,11 @@ function urlOrigin(u) {
 }
 
 function isTrustedOrigin(u) {
-  return TRUSTED_ORIGINS.has(urlOrigin(u));
+  return trustedOrigins.has(urlOrigin(u));
 }
 
 function isTrustedReferrer(ref) {
-  return ref && TRUSTED_ORIGINS.has(urlOrigin(ref));
+  return ref && trustedOrigins.has(urlOrigin(ref));
 }
 
 // Load detection rules: prefer cached rules, fall back to bundled JSON
@@ -57,7 +50,10 @@ async function loadRulesFast() {
 }
 
 // Shared promise for detection rules so early scan and main script use same data
-const rulesPromise = loadRulesFast();
+const rulesPromise = loadRulesFast().then((rules) => {
+  trustedOrigins = new Set((rules.trusted_origins || []).map((u) => urlOrigin(u)));
+  return rules;
+});
 
 // Basic rule scoring and block action.
 // This is a lightweight early pass; the full DetectionEngine runs later.
