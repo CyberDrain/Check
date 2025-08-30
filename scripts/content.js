@@ -68,10 +68,10 @@ async function loadRulesFast() {
 
 // Shared promise for detection rules so early scan and main script use same data
 const rulesPromise = loadRulesFast().then((rules) => {
-  const origins = rules.trusted_origins
+  const ruleOrigins = Array.isArray(rules.trusted_origins)
     ? rules.trusted_origins.map((u) => urlOrigin(u))
-    : DEFAULT_TRUSTED_ORIGINS;
-  trustedOrigins = new Set(origins);
+    : [];
+  trustedOrigins = new Set([...DEFAULT_TRUSTED_ORIGINS, ...ruleOrigins]);
   rulesLoaded = true;
   return rules;
 });
