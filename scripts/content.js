@@ -10,8 +10,19 @@
 
 import logger from "./utils/logger.js";
 
-// CyberDrain integration - Trusted origins are loaded dynamically from rules
-let trustedOrigins = new Set();
+// CyberDrain integration - Default trusted origins to avoid race before rules load
+const DEFAULT_TRUSTED_ORIGINS = [
+  "https://login.microsoftonline.com",
+  "https://login.microsoft.com",
+  "https://login.windows.net",
+  "https://login.microsoftonline.us",
+  "https://login.partner.microsoftonline.cn",
+  "https://login.live.com",
+];
+
+let trustedOrigins = new Set(
+  DEFAULT_TRUSTED_ORIGINS.map((u) => urlOrigin(u))
+);
 
 function urlOrigin(u) {
   try {
@@ -51,7 +62,8 @@ async function loadRulesFast() {
 
 // Shared promise for detection rules so early scan and main script use same data
 const rulesPromise = loadRulesFast().then((rules) => {
-  trustedOrigins = new Set((rules.trusted_origins || []).map((u) => urlOrigin(u)));
+  const origins = rules.trusted_origins || DEFAULT_TRUSTED_ORIGINS;
+  trustedOrigins = new Set(origins.map((u) => urlOrigin(u)));
   return rules;
 });
 
