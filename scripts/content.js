@@ -9,8 +9,20 @@
  */
 
 (async () => {
-  const { default: logger } = await import(chrome.runtime.getURL("scripts/utils/logger.js"));
-
+  let logger;
+  try {
+    const imported = await import(chrome.runtime.getURL("scripts/utils/logger.js"));
+    logger = imported.default;
+  } catch (err) {
+    // Fallback logger: logs to console
+    logger = {
+      error: (...args) => console.error("[logger fallback]", ...args),
+      warn: (...args) => console.warn("[logger fallback]", ...args),
+      info: (...args) => console.info("[logger fallback]", ...args),
+      log: (...args) => console.log("[logger fallback]", ...args),
+    };
+    console.error("Failed to import logger module:", err);
+  }
   chrome.runtime.sendMessage({ type: "ping" }, (response) => {
     if (chrome.runtime.lastError) {
       console.error("Ping error:", chrome.runtime.lastError.message);
