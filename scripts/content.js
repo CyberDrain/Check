@@ -424,10 +424,11 @@ class CheckContent {
       if (!hasPw) continue;
       const act = this.resolveAction(f.getAttribute("action"));
       const actOrigin = urlOrigin(act);
-      if (!trustedOrigins.has(actOrigin)) bad.push({action: actOrigin});
+      if (!(await isTrustedOrigin(actOrigin))) bad.push({ action: actOrigin });
     }
 
-    if (bad.length) this.showToast("Unusual: password form posts outside Microsoft login.");
+    if (bad.length)
+      this.showToast("Unusual: password form posts outside Microsoft login.");
   }
 
   resolveAction(a) {
@@ -445,10 +446,13 @@ class CheckContent {
       if (requirePw && !f.querySelector('input[type="password"]')) continue;
       const act = this.resolveAction(f.getAttribute("action"));
       const actOrigin = urlOrigin(act);
-      if (!trustedOrigins.has(actOrigin)) offenders.push({ action: act, actionOrigin: actOrigin });
+      if (!(await isTrustedOrigin(actOrigin)))
+        offenders.push({ action: act, actionOrigin: actOrigin });
     }
 
-    return offenders.length ? { fail: true, reason: "non-microsoft-form-action", offenders } : { fail: false };
+    return offenders.length
+      ? { fail: true, reason: "non-microsoft-form-action", offenders }
+      : { fail: false };
   }
 
   async auditSubresourceOrigins() {
@@ -458,11 +462,11 @@ class CheckContent {
       ...document.querySelectorAll('link[rel="stylesheet"][href]'),
       ...document.querySelectorAll('img[src]')
     ];
-    
+
     const origins = new Set();
     const nonMs = new Set();
     const origin = location.origin.toLowerCase();
-    
+
     for (const el of nodes) {
       const url = el.src || el.href;
       if (!url) continue;
@@ -470,7 +474,7 @@ class CheckContent {
       if (!o) continue;
       origins.add(o);
       // If all assets are on the same fake origin, this may yield 0 — that's fine.
-      if (!trustedOrigins.has(o) && o !== origin) nonMs.add(o);
+      if (!(await isTrustedOrigin(o)) && o !== origin) nonMs.add(o);
     }
     
     return {
