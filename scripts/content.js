@@ -454,7 +454,7 @@ class CheckContent {
       if (requirePw && !f.querySelector('input[type="password"]')) continue;
       const act = this.resolveAction(f.getAttribute("action"));
       const actOrigin = urlOrigin(act);
-      if (!trustedOrigins.has(actOrigin))
+      if (!(await isTrustedOrigin(actOrigin)))
         offenders.push({ action: act, actionOrigin: actOrigin });
     }
 
