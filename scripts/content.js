@@ -32,10 +32,7 @@ function urlOrigin(u) {
 }
 
 async function ensureRulesLoaded() {
-  if (!rulesLoaded) {
-    await rulesPromise;
-    rulesLoaded = true;
-  }
+  if (!rulesLoaded) await rulesPromise;
 }
 
 async function isTrustedOrigin(origin) {
