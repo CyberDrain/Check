@@ -416,9 +416,6 @@ class CheckContent {
   async enforceMicrosoftActionIfConfigured() {
     const requireAction = this.policy?.RequireMicrosoftAction !== false;
     if (!requireAction) return;
-
-    await ensureRulesLoaded();
-
     const forms = Array.from(document.querySelectorAll("form"));
     const bad = [];
 
@@ -426,8 +423,7 @@ class CheckContent {
       const hasPw = !!f.querySelector('input[type="password"]');
       if (!hasPw) continue;
       const act = this.resolveAction(f.getAttribute("action"));
-      const actOrigin = urlOrigin(act);
-      if (!trustedOrigins.has(actOrigin)) bad.push({ action: actOrigin });
+      if (!(await isTrustedOrigin(act))) bad.push({ action: urlOrigin(act) });
     }
 
     if (bad.length)
@@ -441,16 +437,14 @@ class CheckContent {
   }
 
   async checkFormActions(requirePw) {
-    await ensureRulesLoaded();
     const forms = Array.from(document.querySelectorAll("form"));
     const offenders = [];
 
     for (const f of forms) {
       if (requirePw && !f.querySelector('input[type="password"]')) continue;
       const act = this.resolveAction(f.getAttribute("action"));
-      const actOrigin = urlOrigin(act);
-      if (!trustedOrigins.has(actOrigin))
-        offenders.push({ action: act, actionOrigin: actOrigin });
+      if (!(await isTrustedOrigin(act)))
+        offenders.push({ action: act, actionOrigin: urlOrigin(act) });
     }
 
     return offenders.length
@@ -459,7 +453,6 @@ class CheckContent {
   }
 
   async auditSubresourceOrigins() {
-    await ensureRulesLoaded();
     const nodes = [
       ...document.querySelectorAll('script[src]'),
       ...document.querySelectorAll('link[rel="stylesheet"][href]'),
@@ -477,7 +470,7 @@ class CheckContent {
       if (!o) continue;
       origins.add(o);
       // If all assets are on the same fake origin, this may yield 0 — that's fine.
-      if (!trustedOrigins.has(o) && o !== origin) nonMs.add(o);
+      if (!(await isTrustedOrigin(o)) && o !== origin) nonMs.add(o);
     }
 
     return {
