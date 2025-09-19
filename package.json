@@ -7,6 +7,10 @@
     "doc": "docs"
   },
   "scripts": {
+    "build": "node build.js",
+    "build:watch": "tsc --watch",
+    "clean": "rimraf dist",
+    "dev": "tsc --watch",
     "test": "node --test"
   },
   "keywords": [],
@@ -14,6 +18,9 @@
   "license": "ISC",
   "type": "module",
   "devDependencies": {
-    "jsdom": "^26.1.0"
+    "@types/chrome": "^0.0.268",
+    "jsdom": "^26.1.0",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.4.5"
   }
 }
