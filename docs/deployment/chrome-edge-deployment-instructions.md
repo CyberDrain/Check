@@ -60,7 +60,7 @@ Edge:
 {
   "knepjpocdagponkonnbggpcnhnaikajg": {
     "installation_mode": "force_installed",
-    "update_url": "https://clients2.google.com/service/update2/crx",
+    "update_url": "https://edge.microsoft.com/extensionwebstorebase/v1/crx",
     "settings": {
       "showNotifications": true,
       "enableValidPageBadge": false,
@@ -90,7 +90,8 @@ Edge:
 2. Go to **Devices** > Configuration profiles > Create Profile
 3. Choose:
    1. Platform: Windows 10 and later
-   2. Profile type: Custom
+   2. Profile type: Templates
+   3. Template name: Custom
 4. Click Create and fill in:
    1. Name: Chrome Extension - Check
    2. Description: Deploys and configures the Check Chrome extension
