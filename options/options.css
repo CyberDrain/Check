@@ -316,6 +316,186 @@ body {
   gap: 32px;
 }
 
+/* Rule Playground */
+#rulePlaygroundGroup {
+  position: relative;
+}
+
+.playground-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-top: 12px;
+}
+
+.playground-column {
+  flex: 1 1 380px;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.playground-textarea {
+  width: 100%;
+  min-height: 240px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--input-bg);
+  resize: vertical;
+  color: var(--text-primary);
+}
+
+.playground-textarea.small {
+  min-height: 180px;
+}
+
+.playground-textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(247, 127, 0, 0.25);
+}
+
+/* Stacked label layout for multi-line playground inputs */
+.playground-column .setting-label.stacked-label {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.playground-column .setting-label.stacked-label textarea.playground-textarea {
+  margin-top: 0; /* gap above handles spacing */
+}
+
+.playground-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.playground-results {
+  margin-top: 20px;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  /* max-height: 420px; */
+  overflow: auto;
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+.playground-placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.playground-result-group {
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 12px;
+}
+
+.playground-result-group:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.playground-result-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.playground-result-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.playground-result-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  background: var(--content-bg);
+  border: 1px solid var(--border-color);
+  padding: 6px 8px;
+  border-radius: 6px;
+  line-height: 1.3;
+}
+
+.playground-result-item.success { border-color: #059669; }
+.playground-result-item.warning { border-color: #d97706; }
+.playground-result-item.error { border-color: #dc2626; }
+
+.playground-badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--primary-color);
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.playground-badge.secondary { background: #6b7280; }
+.playground-badge.weight { background: #2563eb; }
+.playground-badge.block { background: #dc2626; }
+.playground-badge.allow { background: #059669; }
+.playground-badge.warning { background: #d97706; }
+
+/* Decision badge variants (reuse playground-badge base) */
+.decision-badge-pass { background:#065f46; color:#d1fae5; }
+.decision-badge-warn { background:#92400e; color:#fde68a; }
+.decision-badge-block { background:#7f1d1d; color:#fecaca; }
+
+.playground-summary {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--background-color);
+  border: 1px solid var(--border-color);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.playground-summary.pass { border-color: #059669; }
+.playground-summary.fail { border-color: #dc2626; }
+.playground-summary.partial { border-color: #d97706; }
+
+.playground-code-fragment {
+  display: block;
+  margin-top: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--content-bg);
+  border: 1px solid var(--border-color);
+  padding: 6px 8px;
+  border-radius: 4px;
+  max-height: 160px;
+  overflow: auto;
+}
+
+@media (max-width: 900px) {
+  .playground-grid { flex-direction: column; }
+  .playground-column { min-width: 100%; }
+}
+
 /* Ensure cards don't overflow on smaller screens */
 @media (max-width: 480px) {
   .settings-grid {
@@ -341,6 +521,7 @@ body {
   .setting-description {
     word-break: break-word;
     overflow-wrap: break-word;
+    -webkit-hyphens: auto;
     hyphens: auto;
   }
 
@@ -1318,10 +1499,10 @@ body {
   border-radius: 4px;
   border: 1px solid transparent;
   transition: all 0.2s ease;
-  user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
+  user-select: none;
 }
 
 .mobile-copyable:hover,
@@ -1653,9 +1834,20 @@ body {
   height: 100%;
   background: rgba(0, 0, 0, 0.5);
   z-index: 2000;
-  display: flex;
+  /* Start hidden; only show when .visible added (prevents flash on load) */
+  display: none;
   align-items: center;
   justify-content: center;
+}
+
+/* When explicitly shown via JS */
+.modal-overlay.visible {
+  display: flex;
+}
+
+/* Ensure [hidden] attribute always forces display none even if class added */
+.modal-overlay[hidden] {
+  display: none !important;
 }
 
 .modal {

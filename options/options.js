@@ -64,6 +64,18 @@ class CheckOptions {
     this.elements.toggleConfigView =
       document.getElementById("toggleConfigView");
 
+    // Rule Playground elements
+    this.elements.playgroundRulesInput = document.getElementById("playgroundRulesInput");
+    this.elements.playgroundTestUrl = document.getElementById("playgroundTestUrl");
+    this.elements.playgroundHtmlInput = document.getElementById("playgroundHtmlInput");
+    this.elements.playgroundResults = document.getElementById("playgroundResults");
+    this.elements.runRuleTestBtn = document.getElementById("runRuleTestBtn");
+    this.elements.validateRulesBtn = document.getElementById("validateRulesBtn");
+    this.elements.sanitizeRulesBtn = document.getElementById("sanitizeRulesBtn");
+    this.elements.copyRulesBtn = document.getElementById("copyRulesBtn");
+    this.elements.clearPlaygroundBtn = document.getElementById("clearPlaygroundBtn");
+    this.elements.loadCurrentRulesBtn = document.getElementById("loadCurrentRulesBtn");
+
     // Logging settings (moved from privacy section)
     this.elements.enableDebugLogging =
       document.getElementById("enableDebugLogging");
@@ -83,7 +95,7 @@ class CheckOptions {
 
     // Branding
     this.elements.companyName = document.getElementById("companyName");
-	this.elements.companyURL = document.getElementById("companyURL");
+    this.elements.companyURL = document.getElementById("companyURL");
     this.elements.productName = document.getElementById("productName");
     this.elements.supportEmail = document.getElementById("supportEmail");
     this.elements.primaryColor = document.getElementById("primaryColor");
@@ -162,10 +174,18 @@ class CheckOptions {
       this.refreshDetectionRules()
     );
 
+    // Playground actions
+    this.elements.runRuleTestBtn?.addEventListener("click", () => this.runRulePlaygroundTest());
+    this.elements.validateRulesBtn?.addEventListener("click", () => this.validatePlaygroundRules());
+    this.elements.sanitizeRulesBtn?.addEventListener("click", () => this.sanitizePlaygroundRules());
+    this.elements.copyRulesBtn?.addEventListener("click", () => this.copyPlaygroundRules());
+    this.elements.clearPlaygroundBtn?.addEventListener("click", () => this.clearPlayground());
+    this.elements.loadCurrentRulesBtn?.addEventListener("click", () => this.loadCurrentRulesIntoPlayground());
+
     // Branding preview updates
     const brandingInputs = [
       this.elements.companyName,
-	  this.elements.companyURL,
+      this.elements.companyURL,
       this.elements.productName,
       this.elements.primaryColor,
       this.elements.logoUrl,
@@ -218,6 +238,8 @@ class CheckOptions {
     const inputs = document.querySelectorAll("input, select, textarea");
     inputs.forEach((input) => {
       if (input.type === "button" || input.type === "submit") return;
+      // Skip playground-only transient inputs
+      if (input.dataset && input.dataset.playgroundInput === "true") return;
 
       input.addEventListener("change", () => {
         this.markUnsavedChanges();
@@ -414,7 +436,7 @@ class CheckOptions {
       console.warn("Options: Using fallback branding configuration");
       this.brandingConfig = {
         companyName: "CyberDrain",
-		companyURL: "https://cyberdrain.com/",
+    companyURL: "https://cyberdrain.com/",
         productName: "Check",
         primaryColor: "#F77F00",
         logoUrl: "images/icon48.png",
@@ -423,7 +445,7 @@ class CheckOptions {
       console.error("Error loading branding configuration:", error);
       this.brandingConfig = {
         companyName: "CyberDrain",
-		companyURL: "https://cyberdrain.com/",
+		    companyURL: "https://cyberdrain.com/",
         productName: "Check",
         primaryColor: "#F77F00",
         logoUrl: "images/icon48.png",
@@ -484,6 +506,301 @@ class CheckOptions {
       }
     }
   }
+
+  /* ================= Rule Playground (Beta) ================= */
+  getPlaygroundRulesRaw() {
+    return (this.elements.playgroundRulesInput?.value || "").trim();
+  }
+
+  parsePlaygroundRules(silent = false) {
+    const raw = this.getPlaygroundRulesRaw();
+    if (!raw) {
+      if (!silent) this.showToast("No rules JSON provided", "warning");
+      return null;
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed;
+    } catch (e) {
+      if (!silent) this.showToast("Invalid JSON: " + e.message, "error");
+      return null;
+    }
+  }
+
+  validatePlaygroundRules() {
+    const parsed = this.parsePlaygroundRules();
+    if (!parsed) return;
+
+    const issues = [];
+    const suggestions = [];
+    const inspectRule = (rule) => {
+      if (!rule.id) issues.push("Rule missing 'id'");
+      if (!rule.type) issues.push(`Rule ${rule.id || '(unknown)'} missing 'type'`);
+      if (rule.weight !== undefined && typeof rule.weight !== 'number') issues.push(`Rule ${rule.id} weight should be number`);
+      if (!rule.description) suggestions.push(`Rule ${rule.id} missing description (optional but recommended)`);
+    };
+
+    if (Array.isArray(parsed)) {
+      parsed.forEach(inspectRule);
+    } else if (parsed && parsed.rules && Array.isArray(parsed.rules)) {
+      parsed.rules.forEach(inspectRule);
+    } else if (parsed && parsed.id && parsed.type) {
+      inspectRule(parsed);
+    } else {
+      issues.push("JSON does not look like rule(s) array or object with 'rules'.");
+    }
+
+    const html = [
+      '<div class="playground-result-group">',
+      '<div class="playground-result-title">Validation Results</div>'
+    ];
+    if (issues.length === 0) {
+      html.push('<div class="playground-summary pass">No blocking validation issues found.</div>');
+    } else {
+      html.push('<div class="playground-summary fail"><strong>Issues:</strong><ul>' + issues.map(i => `<li>${i}</li>`).join('') + '</ul></div>');
+    }
+    if (suggestions.length) {
+      html.push('<div class="playground-summary partial"><strong>Suggestions:</strong><ul>' + suggestions.map(i => `<li>${i}</li>`).join('') + '</ul></div>');
+    }
+    html.push('</div>');
+    this.renderPlaygroundResults(html.join('\n'));
+  }
+
+  sanitizePlaygroundRules() {
+    const parsed = this.parsePlaygroundRules();
+    if (!parsed) return;
+    try {
+      const sanitized = JSON.stringify(parsed, null, 2);
+      this.elements.playgroundRulesInput.value = sanitized;
+      this.showToast("Rules formatted", "success");
+    } catch (e) {
+      this.showToast("Failed to sanitize: " + e.message, "error");
+    }
+  }
+
+  copyPlaygroundRules() {
+    const raw = this.getPlaygroundRulesRaw();
+    if (!raw) {
+      this.showToast("Nothing to copy", "warning");
+      return;
+    }
+    navigator.clipboard.writeText(raw).then(() => {
+      this.showToast("Copied to clipboard", "success");
+    }).catch(err => {
+      this.showToast("Copy failed: " + err.message, "error");
+    });
+  }
+
+  clearPlayground() {
+    if (this.elements.playgroundRulesInput) this.elements.playgroundRulesInput.value = '';
+    if (this.elements.playgroundHtmlInput) this.elements.playgroundHtmlInput.value = '';
+    if (this.elements.playgroundTestUrl) this.elements.playgroundTestUrl.value = '';
+    this.renderPlaygroundResults('<div class="playground-placeholder">Cleared.</div>');
+  }
+
+  async loadCurrentRulesIntoPlayground() {
+    try {
+      // Always load the original packaged detection-rules.json so playground uses the raw rule list
+      const response = await fetch(chrome.runtime.getURL('rules/detection-rules.json'));
+      const json = await response.json();
+      this.elements.playgroundRulesInput.value = JSON.stringify(json, null, 2);
+      this.showToast('Loaded full rules file', 'success');
+    } catch (e) {
+      this.showToast('Failed to load rules: ' + e.message, 'error');
+    }
+  }
+
+  async runRulePlaygroundTest() {
+    // Parse candidate rules JSON from textarea
+    const parsed = this.parsePlaygroundRules();
+    if (!parsed) return;
+
+    const testUrl = (this.elements.playgroundTestUrl?.value || '').trim();
+    if (!testUrl) {
+      this.showToast('Provide a Test URL', 'warning');
+      return;
+    }
+
+    let htmlSource = (this.elements.playgroundHtmlInput?.value || '').trim();
+    if (!htmlSource) {
+      this.showToast('Provide HTML source', 'warning');
+      return;
+    }
+
+    // Build rules config ONLY from user-provided input (no baseline merge)
+    const normalizeRule = (r) => ({
+      id: r.id || 'custom_' + Date.now().toString(36) + '_' + Math.floor(Math.random() * 10000).toString(36),
+      pattern: r.pattern || r.regex || '',
+      flags: r.flags || 'gi',
+      severity: r.severity || 'low',
+      description: r.description || 'Custom rule',
+      confidence: typeof r.confidence === 'number' ? r.confidence : 0.9,
+      action: r.action || 'monitor',
+      category: r.category || r.type || 'general'
+    });
+
+    let fullRulesConfig = null;
+    try {
+      if (Array.isArray(parsed)) {
+        fullRulesConfig = { phishing_indicators: parsed.filter(r => r && (r.pattern || r.regex)).map(normalizeRule), blocking_rules: {} };
+      } else if (parsed && parsed.phishing_indicators) {
+        fullRulesConfig = { phishing_indicators: parsed.phishing_indicators.filter(r => r && (r.pattern || r.regex)).map(normalizeRule), blocking_rules: parsed.blocking_rules || {} };
+      } else if (parsed && parsed.rules) { // legacy/alternate key
+        fullRulesConfig = { phishing_indicators: parsed.rules.filter(r => r && (r.pattern || r.regex)).map(normalizeRule), blocking_rules: parsed.blocking_rules || {} };
+      } else {
+        this.showToast('No usable rules found in input', 'warning');
+        return;
+      }
+
+      // If no phishing_indicators produced but a classic 'rules' array exists, synthesize indicators from those rules
+      if (fullRulesConfig.phishing_indicators.length === 0 && parsed && parsed.rules && Array.isArray(parsed.rules)) {
+        const synthesized = [];
+        for (const r of parsed.rules) {
+          // Attempt to build a regex/pattern from rule.condition
+          let patternCandidate = '';
+          if (r.condition) {
+            if (r.condition.contains) {
+              // Escape regex special chars for substring contains
+              const esc = String(r.condition.contains).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              patternCandidate = esc;
+            } else if (Array.isArray(r.condition.selectors) && r.condition.selectors.length) {
+              // Join selectors as alternation, escape special regex characters minimally
+              patternCandidate = r.condition.selectors.map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+            } else if (Array.isArray(r.condition.domains) && r.condition.domains.length) {
+              patternCandidate = r.condition.domains.map(d => d.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+            }
+          }
+          if (!patternCandidate) continue; // skip rules we cannot synthesize
+
+          // Map weight to severity heuristically
+          const w = r.weight || 0;
+          let severity = 'low';
+            if (w >= 30) severity = 'critical';
+            else if (w >= 25) severity = 'high';
+            else if (w >= 15) severity = 'medium';
+
+          synthesized.push({
+            id: `syn_${r.id || 'rule'}_${synthesized.length + 1}`,
+            pattern: patternCandidate,
+            flags: 'i',
+            severity,
+            description: r.description || 'Synthesized from rules entry',
+            action: severity === 'critical' ? 'block' : (severity === 'high' ? 'warn' : 'monitor'),
+            confidence: 0.75,
+            category: r.type || 'legacy_rule'
+          });
+        }
+        if (synthesized.length) {
+          fullRulesConfig.phishing_indicators.push(...synthesized);
+          this.showToast(`Synthesized ${synthesized.length} indicators from rules[] for testing`, 'info');
+        }
+      }
+      if (!fullRulesConfig.phishing_indicators.length) {
+        this.showToast('No phishing_indicators found. Ensure JSON has phishing_indicators array with objects containing a pattern field.', 'warning');
+        return;
+      }
+    } catch (e) {
+      this.showToast('Failed to prepare rules: ' + e.message, 'error');
+      return;
+    }
+
+    // Dynamically import core engine (works because options page runs in module-capable context)
+    let engine = null;
+    try {
+      engine = await import(chrome.runtime.getURL('scripts/modules/rules-engine-core.js'));
+    } catch (e) {
+      this.renderPlaygroundResults('<div class="playground-summary fail">Failed to load core engine: ' + e.message + '</div>');
+      return;
+    }
+
+    let evaluation;
+    const start = performance.now();
+    try {
+      evaluation = engine.evaluatePageWithRules({
+        rulesJson: fullRulesConfig,
+        pageSource: htmlSource,
+        url: testUrl
+      });
+    } catch (err) {
+      this.renderPlaygroundResults('<div class="playground-summary fail">Evaluation error: ' + err.message + '</div>');
+      return;
+    }
+    const elapsed = Math.round(performance.now() - start);
+
+    // Build result HTML
+    const parts = [];
+    const decisionClass = {
+      block: 'playground-badge block',
+      warn: 'playground-badge warning',
+      pass: 'playground-badge allow'
+    }[evaluation.finalDecision] || 'playground-badge secondary';
+
+    parts.push('<div class="playground-result-group">');
+    parts.push('<div class="playground-result-title">Decision & Summary</div>');
+    parts.push(`<div class="playground-summary ${evaluation.finalDecision === 'block' ? 'fail' : (evaluation.finalDecision === 'warn' ? 'partial' : 'pass')}">` +
+      `<span class="${decisionClass}" style="margin-right:8px;">${evaluation.finalDecision.toUpperCase()}</span>` +
+      `Score ${evaluation.score} • Threats ${evaluation.summary.totalThreats} • Critical ${evaluation.summary.critical} • High ${evaluation.summary.high} • Medium ${evaluation.summary.medium} • Low ${evaluation.summary.low} • ${elapsed}ms` +
+      (evaluation.blocking && evaluation.blocking.shouldBlock ? `<br><strong>Blocking Reason:</strong> ${evaluation.blocking.reason}` : '') +
+      '</div>');
+    parts.push('</div>');
+
+    if (evaluation.threats && evaluation.threats.length) {
+      parts.push('<div class="playground-result-group">');
+      parts.push('<div class="playground-result-title">Threats</div>');
+      parts.push('<ul class="playground-result-list">');
+      const severityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
+      evaluation.threats.sort((a,b)=> (severityOrder[b.severity]||0)-(severityOrder[a.severity]||0));
+        for (const t of evaluation.threats) {
+          const sevClass = t.severity === 'critical' ? 'error' : (t.severity === 'high' ? 'warning' : (t.severity === 'medium' ? 'success' : ''));
+          const actionLabel = t.action === 'block' ? 'Blocking' : (t.action === 'warn' ? 'Warn' : 'Monitor');
+            const categoryLabel = t.category ? this.escapeHtml(t.category) : 'general';
+          const severityBadgeClass = t.severity === 'critical' ? 'block' : (t.severity === 'high' ? 'warning' : (t.severity === 'medium' ? 'weight' : 'allow'));
+          const actionBadgeClass = t.action === 'block' ? 'block' : (t.action === 'warn' ? 'warning' : 'secondary');
+          const categoryBadgeClass = 'secondary';
+          let desc = t.description ? this.escapeHtml(t.description) : '';
+          // Remove generic 'page source' noise phrases to tighten list
+          if (desc) {
+            desc = desc.replace(/\bpage\s+source\b/gi, '').replace(/\s{2,}/g,' ').trim();
+          }
+          const matchFrag = t.matchDetails ? `<code class="playground-code-fragment">${this.escapeHtml(t.matchDetails).slice(0,180)}</code>` : '';
+          parts.push(`<li class="playground-result-item ${sevClass}">` +
+            `<div><strong>${t.id}</strong> ` +
+            `<span class="playground-badge ${severityBadgeClass}" style="margin-left:4px;">${t.severity.toUpperCase()}</span>` +
+            `<span class="playground-badge ${actionBadgeClass}" style="margin-left:4px;">${actionLabel}</span>` +
+            `<span class="playground-badge ${categoryBadgeClass}" style="margin-left:4px;">${categoryLabel}</span>` +
+            `${desc ? `<span style=\"font-size:11px;opacity:.85;display:block;margin-top:4px;\">${desc}</span>`:''}` +
+            `${matchFrag}</div>` +
+          `</li>`);
+        }
+      parts.push('</ul>');
+      parts.push('</div>');
+    } else {
+      parts.push('<div class="playground-result-group"><div class="playground-result-title">Threats</div><div class="playground-placeholder">No threats detected.</div></div>');
+    }
+
+    if (evaluation.unsupported && evaluation.unsupported.length) {
+      parts.push('<div class="playground-result-group">');
+      parts.push('<div class="playground-result-title">Unsupported Features</div>');
+      parts.push('<ul class="playground-result-list">');
+      for (const u of evaluation.unsupported) {
+        parts.push(`<li class="playground-result-item"><span class="playground-badge secondary">N/A</span><div>${this.escapeHtml(u)}</div></li>`);
+      }
+      parts.push('</ul></div>');
+    }
+
+    parts.push('<div class="playground-result-group">');
+    parts.push('<div class="playground-result-title">Raw JSON</div>');
+    parts.push('<pre class="playground-code-fragment">' + this.escapeHtml(JSON.stringify(evaluation, null, 2)) + '</pre>');
+    parts.push('</div>');
+
+    this.renderPlaygroundResults(parts.join('\n'));
+  }
+
+  renderPlaygroundResults(html) {
+    if (!this.elements.playgroundResults) return;
+    this.elements.playgroundResults.innerHTML = html;
+  }
+  /* ================= End Rule Playground ================= */
 
   applyBranding() {
     // Update sidebar branding
@@ -620,11 +937,11 @@ class CheckOptions {
 
     // Branding settings
     this.elements.companyName.value = this.brandingConfig?.companyName || "";
-	this.elements.companyURL.value = this.brandingConfig?.companyURL || "";
+    this.elements.companyURL.value = this.brandingConfig?.companyURL || "";
     this.elements.productName.value = this.brandingConfig?.productName || "";
     this.elements.supportEmail.value = this.brandingConfig?.supportEmail || "";
     this.elements.primaryColor.value =
-      this.brandingConfig?.primaryColor || "#F77F00";
+    this.brandingConfig?.primaryColor || "#F77F00";
     this.elements.logoUrl.value = this.brandingConfig?.logoUrl || "";
   }
 
@@ -919,7 +1236,7 @@ class CheckOptions {
   gatherBrandingData() {
     return {
       companyName: this.elements.companyName.value,
-	  companyURL: this.elements.companyURL.value,
+      companyURL: this.elements.companyURL.value,
       productName: this.elements.productName.value,
       supportEmail: this.elements.supportEmail.value,
       primaryColor: this.elements.primaryColor.value,
@@ -2017,7 +2334,7 @@ class CheckOptions {
           // Custom branding (matches managed_schema.json structure)
           customBranding: {
             companyName: "CyberDrain",
-			CompanyURL: "https://cyberdrain.com/",
+            companyURL: "https://cyberdrain.com/",
             productName: "Check Enterprise",
             primaryColor: "#F77F00",
             logoUrl:
@@ -2158,7 +2475,7 @@ class CheckOptions {
       // Note: enableDeveloperConsoleLogging is excluded - should remain available for debugging
       // Branding fields (if customBranding policy is present)
       companyName: this.elements.companyName,
-	  companyURL: this.elements.companyURL,
+      companyURL: this.elements.companyURL,
       productName: this.elements.productName,
       supportEmail: this.elements.supportEmail,
       primaryColor: this.elements.primaryColor,

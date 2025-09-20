@@ -194,6 +194,45 @@
                         </div>
                         <p class="setting-description">Read-only view of the current detection rules and configuration</p>
                     </div>
+
+                    <div class="setting-group" id="rulePlaygroundGroup">
+                        <div class="config-header">
+                            <h3>Rule Playground (Beta)</h3>
+                            <button class="btn btn-secondary small" id="loadCurrentRulesBtn" title="Load current cached rules into editor">
+                                <span class="material-icons">download</span>
+                                Load Current
+                            </button>
+                        </div>
+                        <p class="setting-description">Prototype and test detection rules locally. These changes are NOT saved to the extension unless you manually update the rules file.</p>
+                        <div class="playground-grid">
+                            <div class="playground-column">
+                                <label class="setting-label stacked-label">Candidate Rules JSON
+                                    <textarea id="playgroundRulesInput" class="playground-textarea" data-playground-input="true" spellcheck="false" placeholder="Paste a single rule object or an array / partial detection-rules.json fragment..."></textarea>
+                                </label>
+                                <div class="playground-inline-actions">
+                                    <button class="btn btn-secondary" id="validateRulesBtn"><span class="material-icons">check</span> Validate</button>
+                                    <button class="btn btn-secondary" id="sanitizeRulesBtn"><span class="material-icons">cleaning_services</span> Sanitize</button>
+                                    <button class="btn btn-secondary" id="copyRulesBtn"><span class="material-icons">content_copy</span> Copy</button>
+                                </div>
+                            </div>
+                            <div class="playground-column">
+                                <label class="setting-label">Test URL
+                                    <input type="url" id="playgroundTestUrl" class="setting-input" data-playground-input="true" placeholder="https://example.com/phish" />
+                                </label>
+                                <label class="setting-label stacked-label"> Sample HTML (will not fetch live)
+                                    <textarea id="playgroundHtmlInput" class="playground-textarea small" data-playground-input="true" spellcheck="false" placeholder="Paste sample page HTML here to simulate scanning..."></textarea>
+                                </label>
+                                <div class="playground-inline-actions">
+                                    <button class="btn btn-primary" id="runRuleTestBtn"><span class="material-icons">play_arrow</span> Test Rules</button>
+                                    <button class="btn btn-secondary" id="clearPlaygroundBtn"><span class="material-icons">clear</span> Clear</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="playground-results" id="playgroundResults" aria-live="polite">
+                            <div class="playground-placeholder">No test run yet. Paste rules and click Test.</div>
+                        </div>
+                        <p class="setting-description">The playground reuses the same rule matching logic as the content script where possible. Some complex rule types may not be fully simulated.</p>
+                    </div>
                 </div>
             </section>
 
@@ -216,7 +255,7 @@
                             <span class="checkbox-custom"></span>
                             Simulate Enterprise Policy Mode (Dev Only)
                         </label>
-                        <select id="logFilter" class="setting-select">
+                        <select id="logFilter" class="setting-select" title="Filter activity log entries by type">
                             <option value="all">All Events</option>
                             <option value="security">Security Events</option>
                             <option value="url_access">URL Access</option>
