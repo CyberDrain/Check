@@ -28,7 +28,7 @@ Thanks for taking the time to contribute! These guidelines help keep contributio
 Security vulnerabilities should be reported privately. Refer to [SECURITY.md](SECURITY.md) for disclosure instructions instead of opening public issues or pull requests.
 
 ## Pull Request Workflow
-1. Create a topic branch from `main`.
+1. Create a topic branch from `dev`.
 2. Make your changes and commit them following the guidelines above.
 3. Ensure manual tests pass and any ESLint checks you run are clean.
 4. Push your branch and open a pull request describing the changes and test results.

@@ -33,6 +33,10 @@ if (window.checkExtensionLoaded) {
   const SCAN_COOLDOWN = 1200; // 1200ms between scans - increased for performance
   const WARNING_THRESHOLD = 3; // Block if 4+ warning threats found (escalation threshold)
   let initialBody; // Reference to the initial body element
+  let lastWakeTime = 0; // Track when the tab became visible again
+  let wakeGuardActive = false; // Prevent immediate re-scans after waking
+  let wakeGuardTimeout = null; // Timer to release wake guard
+  const WAKE_STABILIZATION_MS = 3500; // Allow DOM to settle after wake
 
   // Console log capturing
   let capturedLogs = [];
@@ -167,6 +171,14 @@ if (window.checkExtensionLoaded) {
     }
   }
 
+  function isNonSuspiciousResult(result) {
+    return (
+      !!result &&
+      result.isSuspicious === false &&
+      result.isBlocked === false
+    );
+  }
+
   // Conditional logger that respects developer console logging setting
   const logger = {
     log: (...args) => {
@@ -188,6 +200,51 @@ if (window.checkExtensionLoaded) {
       }
     },
   };
+
+  if (typeof document.visibilityState !== "undefined") {
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+  }
+
+  function handleVisibilityChange() {
+    try {
+      if (document.visibilityState === "visible") {
+        lastWakeTime = Date.now();
+        wakeGuardActive = true;
+        logger.debug(
+          `[WakeGuard] Tab became visible - entering stabilization window (${WAKE_STABILIZATION_MS}ms)`
+        );
+        scheduleWakeGuardRelease();
+      } else if (document.visibilityState === "hidden") {
+        if (wakeGuardTimeout) {
+          clearTimeout(wakeGuardTimeout);
+          wakeGuardTimeout = null;
+        }
+        wakeGuardActive = false;
+      }
+    } catch (visibilityError) {
+      logger.warn("Visibility change handler failed:", visibilityError);
+    }
+  }
+
+  function scheduleWakeGuardRelease() {
+    if (wakeGuardTimeout) {
+      clearTimeout(wakeGuardTimeout);
+    }
+
+    wakeGuardTimeout = setTimeout(() => {
+      wakeGuardTimeout = null;
+      if (!wakeGuardActive) {
+        return;
+      }
+
+      wakeGuardActive = false;
+      logger.debug("[WakeGuard] Stabilization window complete - re-evaluating page");
+
+      if (isNonSuspiciousResult(lastDetectionResult)) {
+        runProtection(true, { reason: "wake-guard-release" });
+      }
+    }, WAKE_STABILIZATION_MS);
+  }
 
   /**
    * Load developer mode setting from configuration (enables console logging and debug features)
@@ -2334,16 +2391,33 @@ if (window.checkExtensionLoaded) {
   /**
    * Main protection logic following CORRECTED specification
    */
-  async function runProtection(isRerun = false) {
+  async function runProtection(isRerun = false, rerunContext = {}) {
     try {
-      logger.log(
-        `🚀 Starting protection analysis ${isRerun ? "(re-run)" : "(initial)"}`
-      );
+      const contextLabel = isRerun
+        ? rerunContext?.reason
+          ? `(re-run:${rerunContext.reason})`
+          : "(re-run)"
+        : "(initial)";
+      logger.log(`🚀 Starting protection analysis ${contextLabel}`);
       logger.log(
         `📄 Page info: ${document.querySelectorAll("*").length} elements, ${
           document.body?.textContent?.length || 0
         } chars content`
       );
+
+      if (
+        isRerun &&
+        wakeGuardActive &&
+        isNonSuspiciousResult(lastDetectionResult)
+      ) {
+        const sinceWake = Date.now() - lastWakeTime;
+        if (sinceWake < WAKE_STABILIZATION_MS) {
+          logger.debug(
+            `[WakeGuard] Skipping protection re-run (${sinceWake}ms since wake); DOM still stabilizing`
+          );
+          return;
+        }
+      }
 
       // Load configuration to check protection settings and URL allowlist
       const config = await new Promise((resolve) => {

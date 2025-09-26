@@ -30,7 +30,7 @@
     "^https://[^.]*\\.microsoftonline-p\\.com$",
     "^https://[^.]*\\.microsoftazuread-sso\\.com$",
     "^https://[^.]*\\.azureedge\\.net$",
-    "^https://[^.]*\\.bing\\.com$",
+    "^https://[^.]*\\.bing\\.com$"
   ],
   "exclusion_system": {
     "description": "Centralized exclusion system to prevent false positives on legitimate sites",
