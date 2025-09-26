@@ -6,7 +6,7 @@ on:
       - labeled
 jobs:
   add-comment_bug:
-    if: github.repository_owner == 'CyberDrain' && github.event.label.name == 'unconfirmed-by-user'
+    if: github.repository_owner == 'CyberDrain' && github.event.label.name == 'bug'
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -20,3 +20,18 @@ jobs:
             > I would like to work on this please!
             
             Thank you for helping us maintain the project!
+  add-comment_feature:
+    if: github.repository_owner == 'CyberDrain' && github.event.label.name == 'enhancement'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Add Comment
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            Thank you for suggesting a new feature. If you would like to work on this feature, please comment:
+            > I would like to work on this please!
+            
+            Thank you for helping us improve the project!

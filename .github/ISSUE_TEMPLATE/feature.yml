@@ -3,14 +3,13 @@ description: "Suggest a new feature or improvement"
 title: "[Feature Request]: "
 labels:
   - "enhancement"
-  - "no-priority"
 
 body:
   # Introductory Markdown
   - type: markdown
     attributes:
       value: |
-        **Thank you for suggesting a new feature or improvement for CIPP**
+        **Thank you for suggesting a new feature or improvement for Check!**
 
         Before creating a request, please:
 
@@ -18,9 +17,9 @@ body:
         2. Note that **repeat feature requests** are permitted if a previous request was closed more than 30 days ago.
         3. Consider implementing the feature yourself by reviewing the [contribution guidelines](./CyberDrain/Check/blob/main/CONTRIBUTING.md).
         4. Feature requests that lack sufficient detail or feasibility may be closed at any time.
-        5. **This request will auto-close in 14 days** if no meaningful progress or collaboration occurs.
-        6. If you would like to work on this feature, comment `"I'd like to work on this please!"`
-        7. Any request that is detrimental to security or the product's stability will be closed without notice.
+        5. If you would like to work on this feature, comment `"I'd like to work on this please!"`
+        6. Any request that is detrimental to security or the product's stability will be closed without notice.
+        7. Development is primarily driven by community volunteers. New features may not be implemented immediately or at all, and are at the contributors' discretion.
 
   # Checkboxes for Confirmations
   - type: checkboxes

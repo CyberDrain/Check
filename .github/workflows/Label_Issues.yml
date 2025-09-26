@@ -5,8 +5,8 @@ on:
     types:
       - opened
 jobs:
-  label_issues_bugs:
-    if: github.repository_owner == 'CyberDrain' && contains(github.event.issue.title, 'Bug')
+  label_issues:
+    if: github.repository_owner == 'CyberDrain'
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -15,17 +15,5 @@ jobs:
         uses: andymckay/labeler@5c59dabdfd4dd5bd9c6e6d255b01b9d764af4414
         with:
           add-labels: 'not-assigned'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          ignore-if-assigned: true
-  label_issues_frs:
-    if: github.repository_owner == 'CyberDrain' && contains(github.event.issue.title, 'Feature')
-    runs-on: ubuntu-latest
-    permissions:
-      issues: write
-    steps:
-      - name: Label Issues
-        uses: andymckay/labeler@5c59dabdfd4dd5bd9c6e6d255b01b9d764af4414
-        with:
-          add-labels: 'enhancement, not-assigned'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           ignore-if-assigned: true
