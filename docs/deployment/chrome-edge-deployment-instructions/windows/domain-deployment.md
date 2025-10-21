@@ -23,7 +23,27 @@ Each profile contains **two OMA-URI settings**:
 
 #### Step 2: Configuration
 
-Documentation to follow
+Download  -- 
+1. ​[Check-Extension.admx](../../../../enterprise/admx/Check-Extension.admx)​
+2. ​[Check-Extension.adml](../../../../enterprise/admx/en-US/Check-Extension.adml)
+
+Go to Intune Admin Center.
+
+Navigate to: Devices → Configuration profiles
+Click on Import ADMX Create → Import 
+Import the following file​ Check-Extension.admx and Check-Extension.adml Review and Create.
+Once finished uploading and is Available
+
+Click on Policy 
+Create → New Import Policy
+Platform -> Windows 10 and later
+Profile type -> Templates -> Imported Administratie Templates (Preview)
+Give Templete Name
+Configuration Settings -> Select CyberDrain -> Check -> Phishing Protect -> Configure Edge/Chrome
+Scope tag - if needed
+Assignment select Users or GRoup or Devices how ever you do it
+Review and Create
+
 {% endtab %}
 
 {% tab title="Group Policy" %}
