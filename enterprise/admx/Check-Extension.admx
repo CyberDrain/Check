@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<policyDefinitions xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" revision="1.0" schemaVersion="1.0" xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+<policyDefinitions xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" revision="1.1" schemaVersion="1.0" xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
   <policyNamespaces>
     <target prefix="cyberdrain" namespace="CyberDrain.Policies.Check" />
   </policyNamespaces>
@@ -132,11 +132,11 @@
     </policy>
 
     <!-- URL Allowlist -->
-    <policy name="CheckUrlAllowlist" class="Machine" displayName="$(string.CheckUrlAllowlist)" explainText="$(string.CheckUrlAllowlist_Explain)" key="SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\knepjpocdagponkonnbggpcnhnaikajg\policy" presentation="$(presentation.CheckUrlAllowlist)">
+    <policy name="CheckUrlAllowlist" class="Machine" displayName="$(string.CheckUrlAllowlist)" explainText="$(string.CheckUrlAllowlist_Explain)" key="SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\knepjpocdagponkonnbggpcnhnaikajg\policy\urlAllowlist" presentation="$(presentation.CheckUrlAllowlist)">
       <parentCategory ref="CheckExtensionEdge" />
       <supportedOn ref="SUPPORTED_WIN7" />
       <elements>
-        <list id="UrlAllowlistList" valueName="urlAllowlist" />
+        <list id="UrlAllowlistList" key="SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\knepjpocdagponkonnbggpcnhnaikajg\policy\urlAllowlist" valuePrefix="" />
       </elements>
     </policy>
 
@@ -307,11 +307,11 @@
     </policy>
 
     <!-- URL Allowlist - Chrome -->
-    <policy name="CheckUrlAllowlistChrome" class="Machine" displayName="$(string.CheckUrlAllowlistChrome)" explainText="$(string.CheckUrlAllowlistChrome_Explain)" key="SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\benimdeioplgkhanklclahllklceahbe\policy" presentation="$(presentation.CheckUrlAllowlistChrome)">
+    <policy name="CheckUrlAllowlistChrome" class="Machine" displayName="$(string.CheckUrlAllowlistChrome)" explainText="$(string.CheckUrlAllowlistChrome_Explain)" key="SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\benimdeioplgkhanklclahllklceahbe\policy\urlAllowlist" presentation="$(presentation.CheckUrlAllowlistChrome)">
       <parentCategory ref="CheckExtensionChrome" />
       <supportedOn ref="SUPPORTED_WIN7" />
       <elements>
-        <list id="UrlAllowlistListChrome" valueName="urlAllowlist" />
+        <list id="UrlAllowlistListChrome" key="SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\benimdeioplgkhanklclahllklceahbe\policy\urlAllowlist" valuePrefix="" />
       </elements>
     </policy>
 
@@ -373,6 +373,5 @@
     </policy>
   </policies>
 </policyDefinitions>
-
 
 
