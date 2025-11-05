@@ -70,6 +70,13 @@
       "type": "boolean",
       "default": false
     },
+    "falsePositiveWebhookUrl": {
+      "title": "False Positive Webhook URL",
+      "description": "Webhook URL to send false positive reports to. When configured, users will see a 'Report False Positive' button on blocked pages.",
+      "type": "string",
+      "format": "uri",
+      "default": ""
+    },
     "customBranding": {
       "title": "Custom Branding",
       "description": "Custom branding configuration for white labeling",

@@ -50,7 +50,10 @@
       "^https:\\/\\/[^/]*\\.(youtube|youtu)\\.be(/.*)?$",
       "^https:\\/\\/[^/]*\\.apple\\.com(/.*)?$",
       "^https:\\/\\/[^/]*\\.dynamics\\.com(/.*)?$",
-      "^https:\\/\\/(?:[^/]*\\.)?zoom\\.us(/.*)?$"
+      "^https:\\/\\/(?:[^/]*\\.)?zoom\\.us(/.*)?$",
+      "^https:\\/\\/github\\.com(/.*)?$",
+      "^https:\\/\\/[^/]*\\.github\\.com(/.*)?$",
+      "^https:\\/\\/[^/]*\\.github\\.io(/.*)?$"
     ],
     "context_indicators": {
       "description": "Additional context that indicates legitimate discussion vs phishing",

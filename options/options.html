@@ -115,6 +115,14 @@
                             </label>
                             <p class="setting-description">Tenant identifier to include with CIPP alerts for multi-tenant environments</p>
                         </div>
+
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                False Positive Webhook URL
+                                <input type="url" id="falsePositiveWebhookUrl" class="setting-input" placeholder="https://your-webhook-endpoint.com/false-positive">
+                            </label>
+                            <p class="setting-description">Webhook URL to receive false positive reports. When configured, users will see a 'Report False Positive' button on blocked pages that sends detection data to this endpoint.</p>
+                        </div>
                     </div>
 
                     <div class="setting-group">

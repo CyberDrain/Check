@@ -467,6 +467,12 @@ export class ConfigManager {
       logger.log("Check: Applied enterprise custom branding");
     }
 
+    // Include falsePositiveWebhookUrl from config if available
+    const currentConfig = await this.getConfig();
+    if (currentConfig.falsePositiveWebhookUrl) {
+      finalBranding.falsePositiveWebhookUrl = currentConfig.falsePositiveWebhookUrl;
+    }
+
     return finalBranding;
   }
 

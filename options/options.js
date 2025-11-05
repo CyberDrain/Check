@@ -865,6 +865,7 @@ class CheckOptions {
     );
     this.elements.cippServerUrl = document.getElementById("cippServerUrl");
     this.elements.cippTenantId = document.getElementById("cippTenantId");
+    this.elements.falsePositiveWebhookUrl = document.getElementById("falsePositiveWebhookUrl");
 
     if (this.elements.enablePageBlocking) {
       this.elements.enablePageBlocking.checked =
@@ -879,6 +880,9 @@ class CheckOptions {
     }
     if (this.elements.cippTenantId) {
       this.elements.cippTenantId.value = this.config?.cippTenantId || "";
+    }
+    if (this.elements.falsePositiveWebhookUrl) {
+      this.elements.falsePositiveWebhookUrl.value = this.config?.falsePositiveWebhookUrl || "";
     }
 
     // UI settings
@@ -1103,6 +1107,7 @@ class CheckOptions {
       enableCippReporting: this.elements.enableCippReporting?.checked || false,
       cippServerUrl: this.elements.cippServerUrl?.value || "",
       cippTenantId: this.elements.cippTenantId?.value || "",
+      falsePositiveWebhookUrl: this.elements.falsePositiveWebhookUrl?.value || "",
 
       // UI settings
       showNotifications: this.elements.showNotifications?.checked || false,
@@ -2465,6 +2470,7 @@ class CheckOptions {
       enableCippReporting: this.elements.enableCippReporting,
       cippServerUrl: this.elements.cippServerUrl,
       cippTenantId: this.elements.cippTenantId,
+      falsePositiveWebhookUrl: this.elements.falsePositiveWebhookUrl,
       customRulesUrl: this.elements.customRulesUrl,
       updateInterval: this.elements.updateInterval,
       urlAllowlist: this.elements.urlAllowlist,
