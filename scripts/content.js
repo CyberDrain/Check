@@ -2660,7 +2660,27 @@ if (window.checkExtensionLoaded) {
               redirectTo: redirectHostname,
             });
 
-            return; // Stop processing - do NOT show valid badge for rogue apps
+            // Send rogue_app_detected webhook
+            chrome.runtime.sendMessage({
+              type: "send_webhook",
+              webhookType: "rogue_app_detected",
+              data: {
+                url: location.href,
+                clientId: clientInfo.clientId,
+                appName: clientInfo.appInfo?.appName || "Unknown",
+                reason: clientInfo.reason,
+                severity: "critical",
+                risk: "high",
+                description: clientInfo.appInfo?.description,
+                tags: clientInfo.appInfo?.tags || [],
+                references: clientInfo.appInfo?.references || [],
+                redirectTo: redirectHostname
+              }
+            }).catch(err => {
+              logger.warn("Failed to send rogue_app_detected webhook:", err.message);
+            });
+
+            return;
           }
 
           // Only show valid badge if no rogue app detected
@@ -3177,6 +3197,26 @@ if (window.checkExtensionLoaded) {
             redirectTo: redirectHostname,
           });
 
+          // Send rogue_app_detected webhook
+          chrome.runtime.sendMessage({
+            type: "send_webhook",
+            webhookType: "rogue_app_detected",
+            data: {
+              url: location.href,
+              clientId: clientInfo.clientId,
+              appName: clientInfo.appInfo?.appName || "Unknown",
+              reason: clientInfo.reason,
+              severity: "critical",
+              risk: "high",
+              description: clientInfo.appInfo?.description,
+              tags: clientInfo.appInfo?.tags || [],
+              references: clientInfo.appInfo?.references || [],
+              redirectTo: redirectHostname
+            }
+          }).catch(err => {
+            logger.warn("Failed to send rogue_app_detected webhook:", err.message);
+          });
+
           // Store detection result as critical threat
           lastDetectionResult = {
             verdict: "rogue-app",
@@ -3230,11 +3270,29 @@ if (window.checkExtensionLoaded) {
           logger.error(
             "🛡️ PROTECTION ACTIVE: Blocking page - redirecting to blocking page"
           );
-          // Redirect to actual blocking page when protection is enabled
+          
+          // Send page_blocked webhook
+          chrome.runtime.sendMessage({
+            type: "send_webhook",
+            webhookType: "page_blocked",
+            data: {
+              url: location.href,
+              reason: blockingResult.reason,
+              severity: blockingResult.severity || "critical",
+              score: 0,
+              threshold: blockingResult.threshold || 85,
+              rule: blockingResult.rule?.id || "blocking_rule",
+              ruleDescription: blockingResult.reason,
+              timestamp: new Date().toISOString()
+            }
+          }).catch(err => {
+            logger.warn("Failed to send page_blocked webhook:", err.message);
+          });
+          
           showBlockingOverlay(blockingResult.reason, blockingResult);
           disableFormSubmissions();
           disableCredentialInputs();
-          stopDOMMonitoring(); // Stop monitoring once we've blocked
+          stopDOMMonitoring();
         } else {
           logger.warn(
             "⚠️ PROTECTION DISABLED: Would block but showing warning banner instead"
@@ -3328,6 +3386,25 @@ if (window.checkExtensionLoaded) {
           logger.error(
             "🛡️ PROTECTION ACTIVE: Blocking due to critical detection rule"
           );
+          
+          // Send page_blocked webhook
+          chrome.runtime.sendMessage({
+            type: "send_webhook",
+            webhookType: "page_blocked",
+            data: {
+              url: location.href,
+              reason: reason,
+              severity: "critical",
+              score: 0,
+              threshold: detectionResult.threshold,
+              rule: criticalBlockingRules[0]?.id || "critical_rule",
+              ruleDescription: reason,
+              timestamp: new Date().toISOString()
+            }
+          }).catch(err => {
+            logger.warn("Failed to send page_blocked webhook:", err.message);
+          });
+          
           showBlockingOverlay(reason, {
             threats: criticalBlockingRules.map((rule) => ({
               description: rule.description,
@@ -3447,6 +3524,25 @@ if (window.checkExtensionLoaded) {
           logger.error(
             "🛡️ PROTECTION ACTIVE: Blocking page due to critical phishing indicators"
           );
+          
+          // Send page_blocked webhook
+          chrome.runtime.sendMessage({
+            type: "send_webhook",
+            webhookType: "page_blocked",
+            data: {
+              url: location.href,
+              reason: reason,
+              severity: "critical",
+              score: 0,
+              threshold: detectionResult.threshold,
+              rule: criticalThreats[0]?.id || "critical_phishing",
+              ruleDescription: reason,
+              timestamp: new Date().toISOString()
+            }
+          }).catch(err => {
+            logger.warn("Failed to send page_blocked webhook:", err.message);
+          });
+          
           showBlockingOverlay(reason, {
             threats: criticalThreats,
             score: phishingResult.score,
@@ -3618,6 +3714,25 @@ if (window.checkExtensionLoaded) {
             logger.error(
               "🛡️ PROTECTION ACTIVE: Blocking page due to high threat"
             );
+            
+            // Send page_blocked webhook
+            chrome.runtime.sendMessage({
+              type: "send_webhook",
+              webhookType: "page_blocked",
+              data: {
+                url: location.href,
+                reason: reason,
+                severity: severity,
+                score: detectionResult.score,
+                threshold: detectionResult.threshold,
+                rule: detectionResult.triggeredRules?.[0] || "unknown",
+                ruleDescription: detectionResult.triggeredRules?.[0] || reason,
+                timestamp: new Date().toISOString()
+              }
+            }).catch(err => {
+              logger.warn("Failed to send page_blocked webhook:", err.message);
+            });
+            
             showBlockingOverlay(reason, lastDetectionResult);
             disableFormSubmissions();
             disableCredentialInputs();

@@ -7,6 +7,7 @@
 import { ConfigManager } from "./modules/config-manager.js";
 import { PolicyManager } from "./modules/policy-manager.js";
 import { DetectionRulesManager } from "./modules/detection-rules-manager.js";
+import { WebhookManager } from "./modules/webhook-manager.js";
 import logger from "./utils/logger.js";
 import { store as storeLog } from "./utils/background-logger.js";
 
@@ -286,6 +287,7 @@ class CheckBackground {
     this.policyManager = new PolicyManager();
     this.detectionRulesManager = new DetectionRulesManager();
     this.rogueAppsManager = new RogueAppsManager();
+    this.webhookManager = new WebhookManager(this.configManager);
     this.isInitialized = false;
     this.initializationPromise = null;
     this.initializationRetries = 0;
@@ -1527,11 +1529,39 @@ class CheckBackground {
               return;
             }
 
-            // Handle CIPP report from content script
             await this.handleCippReport(message.payload);
             sendResponse({ success: true });
           } catch (error) {
             logger.error("Check: Failed to send CIPP report:", error);
+            sendResponse({ success: false, error: error.message });
+          }
+          break;
+
+        case "send_webhook":
+          try {
+            if (!message.webhookType || !message.data) {
+              sendResponse({ success: false, error: "Invalid webhook message" });
+              return;
+            }
+
+            const userProfile = await this.getCurrentProfile();
+            const config = await this.configManager.getConfig();
+
+            const metadata = {
+              config: config,
+              userProfile: userProfile,
+              extensionVersion: chrome.runtime.getManifest().version
+            };
+
+            const result = await this.webhookManager.sendWebhook(
+              message.webhookType,
+              message.data,
+              metadata
+            );
+
+            sendResponse({ success: result.success, result: result });
+          } catch (error) {
+            logger.error("Check: Failed to send webhook:", error);
             sendResponse({ success: false, error: error.message });
           }
           break;
@@ -2149,7 +2179,6 @@ class CheckBackground {
   // Handle CIPP reports from content script
   async handleCippReport(basePayload) {
     try {
-      // Get configuration
       const config = await this.configManager.getConfig();
 
       if (!config?.enableCippReporting || !config?.cippServerUrl) {
@@ -2157,111 +2186,29 @@ class CheckBackground {
         return;
       }
 
-      // Build the complete CIPP URL
-      const cippUrl =
-        config.cippServerUrl.replace(/\/+$/, "") + "/api/PublicPhishingCheck";
-
-      // Get user profile information
       const userProfile = await this.getCurrentProfile();
 
-      // Extract user information from the profile structure
-      const userEmail = userProfile?.userInfo?.email || null;
-      const userDisplayName =
-        userProfile?.userInfo?.displayName ||
-        userProfile?.userInfo?.name ||
-        (userEmail ? userEmail.split("@")[0] : null);
-
-      // Extract browser and environment context
-      const browserContext = {
-        browserType: userProfile?.browserInfo?.browserType || "unknown",
-        browserVersion: userProfile?.browserInfo?.browserVersion || "unknown",
-        platform: userProfile?.browserInfo?.platform || "unknown",
-        language: userProfile?.browserInfo?.language || "unknown",
-        extensionVersion:
-          userProfile?.browserInfo?.version ||
-          chrome.runtime.getManifest().version,
-        installType: userProfile?.browserInfo?.installType || "unknown",
+      const metadata = {
+        config: config,
+        userProfile: userProfile,
+        extensionVersion: chrome.runtime.getManifest().version,
+        isPrivateIP: this.webhookManager.isPrivateIP(basePayload.redirectTo)
       };
 
-      // Enhance payload with comprehensive security context
-      const enhancedPayload = {
-        // Original threat data
-        ...basePayload,
-
-        // Tenant and user context
-        tenantId: config.cippTenantId || null,
-        userEmail: userEmail,
-        userDisplayName: userDisplayName,
-        accountType: userProfile?.userInfo?.accountType || "unknown",
-        isManaged: userProfile?.isManaged || false,
-        profileId: userProfile?.profileId || null,
-
-        // Browser and environment context
-        browserContext: browserContext,
-
-        // Security classification
-        alertSeverity: this.mapSeverityLevel(
-          basePayload.severity || basePayload.threatLevel
-        ),
-        alertCategory: this.categorizeSecurityEvent(basePayload),
-
-        // Additional context for CIPP analytics
-        detectionMethod: "chrome_extension",
-        extensionId: chrome.runtime.id,
-        reportVersion: "2.0", // Version identifier for CIPP processing
-
-        // Include redirect information if available (important for OAuth attacks)
-        ...(basePayload.redirectTo && {
-          redirectContext: {
-            redirectHost: basePayload.redirectTo,
-            isLocalhost: basePayload.redirectTo?.includes("localhost"),
-            isPrivateIP: this.isPrivateIP(basePayload.redirectTo),
-          },
-        }),
-
-        // Include client app information if available (for OAuth threats)
-        ...(basePayload.clientId && {
-          oauthContext: {
-            clientId: basePayload.clientId,
-            appName: basePayload.appName || "Unknown",
-            ...(basePayload.reason && { threatReason: basePayload.reason }),
-          },
-        }),
-      };
-
-      logger.log(`Sending enhanced CIPP report to: ${cippUrl}`);
-      logger.debug(
-        `Report type: ${basePayload.type}, severity: ${enhancedPayload.alertSeverity}, category: ${enhancedPayload.alertCategory}`
+      const result = await this.webhookManager.sendWebhook(
+        this.webhookManager.webhookTypes.DETECTION_ALERT,
+        basePayload,
+        metadata
       );
 
-      if (config.cippTenantId) {
-        logger.debug(`Including tenant ID: ${config.cippTenantId}`);
-      }
-      if (userEmail) {
-        logger.debug(`Including user profile: ${userEmail}`);
+      if (!result.success) {
+        throw new Error(result.error || "Failed to send webhook");
       }
 
-      // Send POST request to CIPP server (no OPTIONS query needed)
-      const response = await fetch(cippUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "User-Agent": `Check/${chrome.runtime.getManifest().version}`,
-          "X-Report-Version": "2.0", // Header to help CIPP identify enhanced reports
-        },
-        body: JSON.stringify(enhancedPayload),
-      });
-
-      if (!response.ok) {
-        throw new Error(
-          `CIPP server responded with ${response.status}: ${response.statusText}`
-        );
-      }
-
-      logger.log("✅ Enhanced CIPP report sent successfully");
+      logger.log("✅ Detection alert webhook sent successfully");
     } catch (error) {
-      logger.error("Failed to send CIPP report:", error);
-      throw error; // Re-throw so content script gets the error
+      logger.error("Failed to send detection alert webhook:", error);
+      throw error;
     }
   }
 

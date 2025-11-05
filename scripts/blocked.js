@@ -3,6 +3,10 @@
  * Handles URL defanging, branding, and user interactions for blocked pages
  */
 
+// Store detection details globally for false positive reporting
+let globalDetectionDetails = null;
+let webhookConfig = null;
+
 // Parse URL parameters to get block details with enhanced defanging
 function parseUrlParams() {
   console.log("parseUrlParams called");
@@ -23,6 +27,9 @@ function parseUrlParams() {
     try {
       const details = JSON.parse(decodeURIComponent(detailsParam));
       console.log("Parsed details:", details);
+      
+      // Store details globally for false positive reporting
+      globalDetectionDetails = details;
 
       // Update blocked URL with defanging
       if (details.url) {
@@ -118,6 +125,82 @@ function goBack() {
     window.history.back();
   } else {
     window.location.href = "about:blank";
+  }
+}
+
+async function reportFalsePositive() {
+  console.log("reportFalsePositive function called");
+  
+  const reportBtn = document.getElementById("reportFalsePositiveBtn");
+  
+  if (!webhookConfig || !webhookConfig.url) {
+    console.error("No webhook configured");
+    return;
+  }
+  
+  try {
+    reportBtn.disabled = true;
+    reportBtn.textContent = "Sending...";
+    reportBtn.style.background = "#6b7280";
+    reportBtn.style.color = "white";
+    
+    const payload = {
+      version: "1.0",
+      type: "false_positive_report",
+      timestamp: new Date().toISOString(),
+      source: "Check Extension",
+      extensionVersion: chrome.runtime.getManifest().version,
+      data: {
+        reportedUrl: document.getElementById("blockedUrl").textContent,
+        reportedReason: document.getElementById("blockReason").textContent,
+        reportTimestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        browserInfo: {
+          platform: navigator.platform,
+          language: navigator.language,
+          vendor: navigator.vendor,
+          cookiesEnabled: navigator.cookieEnabled,
+          onLine: navigator.onLine
+        },
+        screenResolution: {
+          width: window.screen.width,
+          height: window.screen.height,
+          availWidth: window.screen.availWidth,
+          availHeight: window.screen.availHeight,
+          colorDepth: window.screen.colorDepth
+        },
+        detectionDetails: globalDetectionDetails || {},
+        userComments: null
+      }
+    };
+    
+    console.log("Sending false positive report to:", webhookConfig.url);
+    console.log("Report payload:", payload);
+    
+    const response = await fetch(webhookConfig.url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Webhook-Type": "false_positive_report",
+        "X-Webhook-Version": "1.0"
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    if (response.ok) {
+      console.log("False positive report sent successfully");
+      reportBtn.textContent = "Report Sent Successfully";
+      reportBtn.style.background = "#16a34a";
+      reportBtn.style.color = "white";
+    } else {
+      console.warn("False positive report failed with HTTP status:", response.status, response.statusText);
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error("Failed to send false positive report:", error);
+    reportBtn.textContent = `Failed: ${error.message}`;
+    reportBtn.style.background = "#dc2626";
+    reportBtn.style.color = "white";
   }
 }
 
@@ -521,6 +604,25 @@ async function loadBranding() {
           contactBtn.style.display = "none";
         }
       }
+      
+      // Check if false positive webhook is configured and show button accordingly
+      const falsePositiveBtn = document.getElementById("reportFalsePositiveBtn");
+      const genericWebhook = storageResult.genericWebhook;
+      if (genericWebhook && genericWebhook.enabled && genericWebhook.url) {
+        const events = genericWebhook.events || [];
+        if (events.includes("false_positive_report")) {
+          console.log("False positive webhook configured, showing report button");
+          webhookConfig = { url: genericWebhook.url };
+          if (falsePositiveBtn) {
+            falsePositiveBtn.style.display = "inline-block";
+          }
+          return;
+        }
+      }
+      console.log("No false positive webhook configured, hiding report button");
+      if (falsePositiveBtn) {
+        falsePositiveBtn.style.display = "none";
+      }
 
       return; // Exit early if we loaded from background script
     }
@@ -585,6 +687,9 @@ document.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("contactAdminBtn")
     .addEventListener("click", contactAdmin);
+  document
+    .getElementById("reportFalsePositiveBtn")
+    .addEventListener("click", reportFalsePositive);
 
   // Add technical details toggle listener
   const techDetailsHeader = document.querySelector(".technical-details-header");

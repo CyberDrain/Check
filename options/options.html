@@ -115,6 +115,65 @@
                             </label>
                             <p class="setting-description">Tenant identifier to include with CIPP alerts for multi-tenant environments</p>
                         </div>
+
+                    </div>
+
+                    <div class="setting-group">
+                        <h3>Generic Webhook</h3>
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                <input type="checkbox" id="genericWebhookEnabled" class="setting-checkbox">
+                                <span class="checkbox-custom"></span>
+                                Enable Generic Webhook
+                            </label>
+                            <p class="setting-description">Send events to a custom webhook endpoint</p>
+                        </div>
+
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                Webhook URL
+                                <input type="url" id="genericWebhookUrl" class="setting-input" placeholder="https://webhook.example.com/endpoint">
+                            </label>
+                            <p class="setting-description">URL to receive webhook payloads</p>
+                        </div>
+
+                        <div class="setting-item">
+                            <label class="setting-label">Event Types to Send</label>
+                            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                                <label class="setting-label">
+                                    <input type="checkbox" id="webhookEvent_detection_alert" class="setting-checkbox">
+                                    <span class="checkbox-custom"></span>
+                                    Detection Alerts
+                                </label>
+                                <label class="setting-label">
+                                    <input type="checkbox" id="webhookEvent_false_positive_report" class="setting-checkbox">
+                                    <span class="checkbox-custom"></span>
+                                    False Positive Reports
+                                </label>
+                                <label class="setting-label">
+                                    <input type="checkbox" id="webhookEvent_page_blocked" class="setting-checkbox">
+                                    <span class="checkbox-custom"></span>
+                                    Page Blocked
+                                </label>
+                                <label class="setting-label">
+                                    <input type="checkbox" id="webhookEvent_rogue_app_detected" class="setting-checkbox">
+                                    <span class="checkbox-custom"></span>
+                                    Rogue App Detected
+                                </label>
+                                <label class="setting-label">
+                                    <input type="checkbox" id="webhookEvent_threat_detected" class="setting-checkbox">
+                                    <span class="checkbox-custom"></span>
+                                    Threat Detected
+                                </label>
+                                <label class="setting-label">
+                                    <input type="checkbox" id="webhookEvent_validation_event" class="setting-checkbox">
+                                    <span class="checkbox-custom"></span>
+                                    Validation Events
+                                </label>
+                            </div>
+                            <p class="setting-description">Select which event types to send to the webhook</p>
+                        </div>
+
                     </div>
 
                     <div class="setting-group">

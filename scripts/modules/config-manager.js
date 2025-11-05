@@ -467,6 +467,12 @@ export class ConfigManager {
       logger.log("Check: Applied enterprise custom branding");
     }
 
+    // Include genericWebhook from config if available
+    const currentConfig = await this.getConfig();
+    if (currentConfig.genericWebhook) {
+      finalBranding.genericWebhook = currentConfig.genericWebhook;
+    }
+
     return finalBranding;
   }
 

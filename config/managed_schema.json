@@ -70,6 +70,43 @@
       "type": "boolean",
       "default": false
     },
+    "genericWebhook": {
+      "title": "Generic Webhook",
+      "description": "Generic webhook configuration for sending detection events to custom endpoint",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "description": "Enable generic webhook",
+          "type": "boolean",
+          "default": false
+        },
+        "url": {
+          "title": "Webhook URL",
+          "description": "The URL to send webhook payloads to",
+          "type": "string",
+          "format": "uri",
+          "default": ""
+        },
+        "events": {
+          "title": "Event Types",
+          "description": "Array of event types to send to this webhook",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "detection_alert",
+              "false_positive_report",
+              "page_blocked",
+              "rogue_app_detected",
+              "threat_detected",
+              "validation_event"
+            ]
+          },
+          "default": []
+        }
+      }
+    },
     "customBranding": {
       "title": "Custom Branding",
       "description": "Custom branding configuration for white labeling",
