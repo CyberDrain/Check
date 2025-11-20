@@ -2431,10 +2431,17 @@ if (window.checkExtensionLoaded) {
         logger.log("⚠️ Page is in an iframe");
       }
 
-      // Load configuration to check protection settings and URL allowlist
+      // Load configuration from background (includes merged enterprise policies)
       const config = await new Promise((resolve) => {
-        chrome.storage.local.get(["config"], (result) => {
-          resolve(result.config || {});
+        chrome.runtime.sendMessage({ type: "GET_CONFIG" }, (response) => {
+          if (response && response.success && response.config) {
+            resolve(response.config);
+          } else {
+            // Fallback to local storage if background not available
+            chrome.storage.local.get(["config"], (result) => {
+              resolve(result.config || {});
+            });
+          }
         });
       });
 

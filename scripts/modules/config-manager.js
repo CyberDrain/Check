@@ -233,6 +233,12 @@ export class ConfigManager {
     if (merged.customBranding) {
       delete merged.customBranding;
     }
+    
+    // Auto-enable debug logging when developer console logging is enabled
+    if (merged.enableDeveloperConsoleLogging === true && merged.enableDebugLogging !== true) {
+      merged.enableDebugLogging = true;
+      logger.log("Check: Auto-enabled debug logging (developer console logging is enabled)");
+    }
 
     // Ensure enterprise policies cannot be overridden
     if (enterpriseConfig.enforcedPolicies) {

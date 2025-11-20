@@ -76,9 +76,6 @@ class CheckOptions {
     this.elements.clearPlaygroundBtn = document.getElementById("clearPlaygroundBtn");
     this.elements.loadCurrentRulesBtn = document.getElementById("loadCurrentRulesBtn");
 
-    // Logging settings (moved from privacy section)
-    this.elements.enableDebugLogging =
-      document.getElementById("enableDebugLogging");
     this.elements.enableDeveloperConsoleLogging = document.getElementById(
       "enableDeveloperConsoleLogging"
     );
@@ -949,8 +946,6 @@ class CheckOptions {
     }
 
     // Logging settings
-    this.elements.enableDebugLogging.checked =
-      this.config.enableDebugLogging || false;
     this.elements.enableDeveloperConsoleLogging.checked =
       this.config.enableDeveloperConsoleLogging || false;
 
@@ -1162,9 +1157,11 @@ class CheckOptions {
         ? this.elements.urlAllowlist.value.split('\n').filter(line => line.trim())
         : [],
 
-      // Debug logging setting
-      enableDebugLogging: this.elements.enableDebugLogging?.checked || false,
+      // Developer mode (debug logging auto-enabled when this is true)
       enableDeveloperConsoleLogging:
+        this.elements.enableDeveloperConsoleLogging?.checked || false,
+      // Auto-enable debug logging when developer mode is enabled
+      enableDebugLogging:
         this.elements.enableDeveloperConsoleLogging?.checked || false,
     };
 
