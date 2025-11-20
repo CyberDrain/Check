@@ -2434,13 +2434,17 @@ if (window.checkExtensionLoaded) {
       // Load configuration from background (includes merged enterprise policies)
       const config = await new Promise((resolve) => {
         chrome.runtime.sendMessage({ type: "GET_CONFIG" }, (response) => {
-          if (response && response.success && response.config) {
-            resolve(response.config);
-          } else {
-            // Fallback to local storage if background not available
+          if (chrome.runtime.lastError || !response || !response.success || !response.config) {
+            // Optionally log the error for debugging
+            if (chrome.runtime.lastError) {
+              logger.log(`[M365-Protection] Error getting config from background: ${chrome.runtime.lastError.message}`);
+            }
+            // Fallback to local storage if background not available or response invalid
             chrome.storage.local.get(["config"], (result) => {
               resolve(result.config || {});
             });
+          } else {
+            resolve(response.config);
           }
         });
       });
