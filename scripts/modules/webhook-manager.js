@@ -104,23 +104,64 @@ export class WebhookManager {
   }
 
   buildDetectionAlertPayload(data) {
+    // Extract rule information from various possible locations
+    const rule = data.rule || data.ruleId || data.event?.rule || null;
+    const reason =
+      data.reason ||
+      data.blockReason ||
+      data.event?.reason ||
+      "Threat detected";
+
+    // Build matched rules array
+    let matchedRules =
+      data.rules || data.matchedRules || data.event?.matchedRules || [];
+
+    // If no matchedRules but we have phishingIndicators, convert them to matched rules
+    if (
+      matchedRules.length === 0 &&
+      data.phishingIndicators &&
+      Array.isArray(data.phishingIndicators)
+    ) {
+      matchedRules = data.phishingIndicators.map((indicatorId) => ({
+        id: indicatorId,
+        description: indicatorId,
+        severity: data.severity || data.threatLevel || "medium",
+      }));
+    }
+
+    // If we have a single rule but no matchedRules array, create one
+    if (matchedRules.length === 0 && rule) {
+      matchedRules = [
+        {
+          id: rule,
+          description: data.ruleDescription || reason,
+          severity:
+            data.severity ||
+            data.threatLevel ||
+            data.event?.severity ||
+            "medium",
+        },
+      ];
+    }
+
     return {
-      url: data.url || data.targetUrl,
-      severity: data.severity || data.threatLevel || "medium",
+      url: data.url || data.targetUrl || data.event?.url,
+      severity:
+        data.severity || data.threatLevel || data.event?.severity || "medium",
       score: data.score || data.threatScore || 0,
       threshold: data.threshold || 85,
-      reason: data.reason || data.blockReason || "Threat detected",
+      reason: reason,
       detectionMethod: data.detectionMethod || "rules_engine",
-      rule: data.rule || data.ruleId || null,
-      ruleDescription: data.ruleDescription || data.reason || null,
+      rule: rule,
+      ruleDescription: data.ruleDescription || reason || null,
       category: data.category || "phishing",
       confidence: data.confidence || 0.8,
-      matchedRules: data.rules || data.matchedRules || [],
+      matchedRules: matchedRules,
       context: {
-        referrer: data.referrer || null,
-        pageTitle: data.pageTitle || null,
-        domain: data.domain || null,
-        redirectTo: data.redirectTo || null,
+        referrer: data.referrer || data.event?.referrer || null,
+        pageTitle: data.pageTitle || data.event?.pageTitle || null,
+        domain: data.domain || data.event?.domain || null,
+        redirectTo: data.redirectTo || data.event?.redirectTo || null,
       },
     };
   }
@@ -145,17 +186,36 @@ export class WebhookManager {
   }
 
   buildPageBlockedPayload(data) {
+    // Extract rule information from various possible locations
+    const rule = data.rule || data.ruleId || null;
+    const reason = data.reason || data.blockReason || "Page blocked";
+
+    // Build matched rules array
+    let matchedRules = data.matchedRules || [];
+
+    // If we have a single rule but no matchedRules array, create one
+    if (matchedRules.length === 0 && rule) {
+      matchedRules = [
+        {
+          id: rule,
+          description: data.ruleDescription || reason,
+          severity: data.severity || data.threatLevel || "high",
+        },
+      ];
+    }
+
     return {
       url: data.url || data.blockedUrl,
       severity: data.severity || data.threatLevel || "high",
       score: data.score || 0,
       threshold: data.threshold || 85,
-      reason: data.reason || data.blockReason || "Page blocked",
+      reason: reason,
       detectionMethod: data.detectionMethod || "rules_engine",
-      rule: data.rule || data.ruleId || null,
-      ruleDescription: data.ruleDescription || data.reason || null,
+      rule: rule,
+      ruleDescription: data.ruleDescription || reason || null,
       category: data.category || "phishing",
       action: "blocked",
+      matchedRules: matchedRules,
       context: {
         referrer: data.referrer || null,
         pageTitle: data.pageTitle || null,

@@ -810,9 +810,7 @@ class CheckBackground {
 
   async _doFlush() {
     const cur =
-      (await safe(
-        storage.local.get(["accessLogs", "securityEvents"])
-      )) || {};
+      (await safe(storage.local.get(["accessLogs", "securityEvents"]))) || {};
     const access = (cur.accessLogs || [])
       .concat(this.pendingLocal.accessLogs)
       .slice(-1000);
@@ -1568,7 +1566,10 @@ class CheckBackground {
         case "send_webhook":
           try {
             if (!message.webhookType || !message.data) {
-              sendResponse({ success: false, error: "Invalid webhook message" });
+              sendResponse({
+                success: false,
+                error: "Invalid webhook message",
+              });
               return;
             }
 
@@ -1578,7 +1579,7 @@ class CheckBackground {
             const metadata = {
               config: config,
               userProfile: userProfile,
-              extensionVersion: chrome.runtime.getManifest().version
+              extensionVersion: chrome.runtime.getManifest().version,
             };
 
             const result = await this.webhookManager.sendWebhook(
@@ -1741,24 +1742,8 @@ class CheckBackground {
     this.pendingLocal.securityEvents.push(logEntry);
     this.scheduleFlush();
 
-    // Send to CIPP if enabled using the correct method
-    if (config?.enableCippReporting && config?.cippServerUrl) {
-      try {
-        await this.handleCippReport({
-          type: logEntry.event.type,
-          severity: logEntry.event.threatLevel || "medium",
-          timestamp: logEntry.timestamp,
-          url: logEntry.event.url,
-          reason: logEntry.event.reason || "Security event logged",
-          tabId: logEntry.tabId,
-          event: logEntry.event,
-          profile: logEntry.profile,
-        });
-      } catch (error) {
-        logger.error("Failed to send event to CIPP:", error);
-        // Don't fail the entire logging operation if CIPP is unavailable
-      }
-    }
+    // NOTE: Webhooks are sent directly via send_webhook and send_cipp_report messages
+    // Do NOT send webhooks here to avoid duplicates
   }
 
   enhanceEventForLogging(event) {
@@ -1989,10 +1974,7 @@ class CheckBackground {
       const policies = await storage.managed.get(null);
       const isManaged = policies && Object.keys(policies).length > 0;
       if (isManaged) {
-        logger.log(
-          "Detected managed environment with policies:",
-          policies
-        );
+        logger.log("Detected managed environment with policies:", policies);
       }
       return isManaged;
     } catch (error) {
@@ -2200,8 +2182,8 @@ class CheckBackground {
     try {
       const config = await this.configManager.getConfig();
 
-      if (!config?.enableCippReporting || !config?.cippServerUrl) {
-        logger.debug("CIPP reporting disabled or no server URL configured");
+      if (!config?.enableCippReporting && !config?.genericWebhook?.enabled) {
+        logger.debug("Webhooks disabled");
         return;
       }
 
@@ -2211,7 +2193,7 @@ class CheckBackground {
         config: config,
         userProfile: userProfile,
         extensionVersion: chrome.runtime.getManifest().version,
-        isPrivateIP: this.webhookManager.isPrivateIP(basePayload.redirectTo)
+        isPrivateIP: this.webhookManager.isPrivateIP(basePayload.redirectTo),
       };
 
       const result = await this.webhookManager.sendWebhook(
