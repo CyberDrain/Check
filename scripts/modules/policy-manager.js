@@ -1,8 +1,10 @@
 /**
  * Policy Manager for Check
  * Handles enterprise policies, permissions, and compliance enforcement
+ * Supports both Chrome (managed storage) and Firefox (3rdparty policies)
  */
 
+import { chrome, storage } from "../browser-polyfill.js";
 import logger from "../utils/logger.js";
 
 export class PolicyManager {
@@ -35,7 +37,7 @@ export class PolicyManager {
       this.enterprisePolicies = await this.loadEnterprisePolicies();
 
       // Load local policies with safe wrapper
-      const localPolicies = await safe(chrome.storage.local.get(["policies"]));
+      const localPolicies = await safe(storage.local.get(["policies"]));
 
       // Merge policies with enterprise taking precedence
       this.policies = this.mergePolicies(
@@ -60,7 +62,16 @@ export class PolicyManager {
         try { return await promise; } catch(_) { return {}; }
       };
       
-      const managedPolicies = await safe(chrome.storage.managed.get(["policies"]));
+      // Firefox uses 3rdparty extension policies instead of managed storage
+      if (this.isFirefox) {
+        logger.log("Check: Firefox detected, policies loaded via 3rdparty extension settings (handled by ConfigManager)");
+        // Firefox policies are loaded through the extension's configuration system
+        // which reads from browser.storage.managed automatically
+        return {};
+      }
+      
+      // Chrome/Edge: Load from managed storage
+      const managedPolicies = await safe(storage.managed.get(["policies"]));
       return managedPolicies?.policies || {};
     } catch (error) {
       logger.log("Check: No enterprise policies available");
@@ -473,7 +484,7 @@ export class PolicyManager {
       const updatedPolicies = { ...this.policies, ...newPolicies };
 
       // Save to storage with safe wrapper
-      await safe(chrome.storage.local.set({ policies: updatedPolicies }));
+      await safe(storage.local.set({ policies: updatedPolicies }));
       this.policies = updatedPolicies;
 
       logger.log("Check: Policies updated");
@@ -506,6 +517,7 @@ export class PolicyManager {
     const report = {
       timestamp: new Date().toISOString(),
       version: chrome.runtime.getManifest().version,
+      browser: this.isFirefox ? 'Firefox' : 'Chrome/Edge',
       policies: this.policies,
       enforcedPolicies: this.policies?.enforcedPolicies || {},
       violations: this.getComplianceViolations(),
@@ -528,7 +540,7 @@ export class PolicyManager {
         try { return await promise; } catch(_) { return {}; }
       };
       
-      const auditLog = await safe(chrome.storage.local.get(["auditLog"]));
+      const auditLog = await safe(storage.local.get(["auditLog"]));
       return auditLog?.auditLog || [];
     } catch (error) {
       logger.error("Check: Failed to get audit log:", error);
@@ -550,7 +562,7 @@ export class PolicyManager {
         source: "policy_manager",
       };
 
-      const auditLog = await safe(chrome.storage.local.get(["auditLog"]));
+      const auditLog = await safe(storage.local.get(["auditLog"]));
       const logs = auditLog?.auditLog || [];
       logs.push(auditEntry);
 
@@ -559,7 +571,7 @@ export class PolicyManager {
         logs.splice(0, logs.length - 10000);
       }
 
-      await safe(chrome.storage.local.set({ auditLog: logs }));
+      await safe(storage.local.set({ auditLog: logs }));
     } catch (error) {
       logger.error("Check: Failed to log audit event:", error);
     }

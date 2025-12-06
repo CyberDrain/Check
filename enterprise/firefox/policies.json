@@ -1,0 +1,53 @@
+{
+  "policies": {
+    "Extensions": {
+      "Install": [
+        ""
+      ],
+      "Locked": [
+        "check@cyberdrain.com"
+      ]
+    },
+    "ExtensionSettings": {
+      "check@cyberdrain.com": {
+        "installation_mode": "force_installed",
+        "install_url": "",
+        "default_area": "navbar"
+      }
+    },
+    "3rdparty": {
+      "Extensions": {
+        "check@cyberdrain.com": {
+          "showNotifications": true,
+          "enableValidPageBadge": true,
+          "validPageBadgeTimeout": 5,
+          "enablePageBlocking": true,
+          "enableCippReporting": false,
+          "cippServerUrl": "",
+          "cippTenantId": "",
+          "customRulesUrl": "https://raw.githubusercontent.com/CyberDrain/Check/refs/heads/main/rules/detection-rules.json",
+          "updateInterval": 24,
+          "urlAllowlist": [],
+          "enableDebugLogging": false,
+          "customBranding": {
+            "companyName": "",
+            "companyURL": "https://cyberdrain.com/",
+            "productName": "",
+            "supportEmail": "",
+            "primaryColor": "#F77F00",
+            "logoUrl": ""
+          },
+          "genericWebhook": {
+            "enabled": false,
+            "url": "https://webhook.example.com/endpoint",
+            "events": [
+              "detection_alert",
+              "page_blocked",
+              "threat_detected"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

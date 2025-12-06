@@ -16,6 +16,7 @@ class CheckPopup {
     this.activityItems = [];
     this.isLoading = false;
     this.isBlockedRoute = false;
+    this.cachedDebugData = null; // Store debug data for blocked pages to enable toggling
 
     this.elements = {};
     this.bindElements();
@@ -251,6 +252,13 @@ class CheckPopup {
         this.elements.debugSection.style.display = "block";
         this.elements.pageSourceSection.style.display = "block";
         this.elements.consoleLogsSection.style.display = "block";
+        
+        // Hide the "Re-run Analysis" button when on a blocked page
+        if (this.isBlockedRoute) {
+          this.elements.retriggerAnalysis.style.display = "none";
+        } else {
+          this.elements.retriggerAnalysis.style.display = "inline-flex";
+        }
       } else {
         this.elements.debugSection.style.display = "none";
         this.elements.pageSourceSection.style.display = "none";
@@ -1375,6 +1383,18 @@ class CheckPopup {
       return;
     }
 
+    // For blocked pages, use cached debug data if available
+    if (this.isBlockedRoute && this.cachedDebugData && this.cachedDebugData.detectionDetails) {
+      console.log("Re-displaying cached debug data for blocked page");
+      this.displayDetectionDetails(this.cachedDebugData.detectionDetails);
+      this.elements.detectionResults.style.display = "block";
+      this.elements.showDetectionDetails.innerHTML = `
+        <span class="material-icons">visibility_off</span>
+        Hide Details
+      `;
+      return;
+    }
+
     if (!this.currentTab || !this.currentTab.url) {
       this.showNotification("No active tab to analyze", "warning");
       return;
@@ -1860,8 +1880,8 @@ class CheckPopup {
                 "Retrieved stored debug data via background script for URL:",
                 url
               );
-              console.log("Returning debug data:", data);
-              return data; // Return the full data object since it IS the debug data
+              console.log("Returning debug data:", data.debugData);
+              return data.debugData; // Return the nested debugData object
             } else {
               console.log("Data too old or no timestamp, cleaning up");
               // Clean up old data
@@ -1945,6 +1965,9 @@ class CheckPopup {
         );
         console.log("Has consoleLogs:", !!storedDebugData.consoleLogs);
         console.log("Has pageSource:", !!storedDebugData.pageSource);
+
+        // Cache the debug data for toggling
+        this.cachedDebugData = storedDebugData;
 
         // Display detection details if available
         if (storedDebugData.detectionDetails) {

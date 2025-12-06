@@ -3,6 +3,7 @@
  * Handles enterprise configuration, branding, and settings management
  */
 
+import { chrome, storage } from "../browser-polyfill.js";
 import logger from "../utils/logger.js";
 
 export class ConfigManager {
@@ -27,7 +28,7 @@ export class ConfigManager {
       this.enterpriseConfig = await this.loadEnterpriseConfig();
 
       // Load local configuration with safe wrapper
-      const localConfig = await safe(chrome.storage.local.get(["config"]));
+      const localConfig = await safe(storage.local.get(["config"]));
 
       // Migrate legacy configuration structure if needed
       if (localConfig?.config) {
@@ -88,7 +89,7 @@ export class ConfigManager {
       let simulateEnterpriseMode = false;
       if (isDevelopment) {
         const simulateMode = await safe(
-          chrome.storage.local.get(["simulateEnterpriseMode"])
+          storage.local.get(["simulateEnterpriseMode"])
         );
         simulateEnterpriseMode = simulateMode?.simulateEnterpriseMode || false;
       }
@@ -124,7 +125,7 @@ export class ConfigManager {
       }
 
       // Attempt to load from managed storage (deployed via GPO/Intune)
-      const managedConfig = await safe(chrome.storage.managed.get(null));
+      const managedConfig = await safe(storage.managed.get(null));
 
       if (managedConfig && Object.keys(managedConfig).length > 0) {
         logger.log("Check: Enterprise configuration found");
@@ -164,7 +165,7 @@ export class ConfigManager {
 
       // First, try to load user-configured branding from storage
       const userBranding = await safe(
-        chrome.storage.local.get(["brandingConfig"])
+        storage.local.get(["brandingConfig"])
       );
 
       if (userBranding && userBranding.brandingConfig) {
@@ -363,7 +364,7 @@ export class ConfigManager {
       };
 
       const defaultConfig = this.getDefaultConfig();
-      await safe(chrome.storage.local.set({ config: defaultConfig }));
+      await safe(storage.local.set({ config: defaultConfig }));
       this.config = defaultConfig;
     } catch (error) {
       logger.error("Check: Failed to set default config:", error);
@@ -383,7 +384,7 @@ export class ConfigManager {
       };
 
       // Get the CURRENT LOCAL CONFIG (not merged), so we only save user overrides
-      const localConfigResult = await safe(chrome.storage.local.get(["config"]));
+      const localConfigResult = await safe(storage.local.get(["config"]));
       const localConfig = localConfigResult?.config || {};
       
       // Merge updates into the local config (not the merged config)
@@ -412,7 +413,7 @@ export class ConfigManager {
       }
 
       // Save only the user's config overrides to local storage
-      await safe(chrome.storage.local.set({ config: updatedLocalConfig }));
+      await safe(storage.local.set({ config: updatedLocalConfig }));
       
       // Reload the full merged config
       await this.loadConfig();
@@ -504,7 +505,7 @@ export class ConfigManager {
         `Check: Migrating configuration from version ${previousVersion}`
       );
 
-      const currentConfig = await safe(chrome.storage.local.get(["config"]));
+      const currentConfig = await safe(storage.local.get(["config"]));
       if (!currentConfig?.config) return;
 
       // Add migration logic here for future versions
@@ -568,7 +569,7 @@ export class ConfigManager {
             return undefined;
           }
         };
-        await safe(chrome.storage.local.set({ branding: importData.branding }));
+        await safe(storage.local.set({ branding: importData.branding }));
         this.brandingConfig = importData.branding;
       }
 

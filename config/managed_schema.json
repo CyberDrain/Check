@@ -13,6 +13,14 @@
       "type": "boolean",
       "default": true
     },
+    "validPageBadgeTimeout": {
+      "title": "Valid Page Badge Timeout (seconds)",
+      "description": "Auto-dismiss timeout for the valid page badge in seconds. Set to 0 for no timeout (badge stays visible until manually dismissed).",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 300,
+      "default": 5
+    },
     "enablePageBlocking": {
       "title": "Page Blocking Enabled",
       "description": "Enable blocking of malicious pages",

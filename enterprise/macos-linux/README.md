@@ -149,6 +149,7 @@ All settings are based on the managed schema and include:
 ### Security Settings
 - **`showNotifications`** - Display security notifications (default: true)
 - **`enableValidPageBadge`** - Show validation badge on legitimate pages (default: true)
+- **`validPageBadgeTimeout`** - Auto-dismiss timeout for valid page badge in seconds (default: 5, set to 0 for no timeout)
 - **`enablePageBlocking`** - Enable blocking of malicious pages (default: true)
 - **`enableCippReporting`** - Enable CIPP server reporting (default: false)
 - **`enableDebugLogging`** - Enable debug logging (default: false)

@@ -69,6 +69,16 @@
                 When enabled (default): A green badge or indicator shows when users are on a verified Microsoft login page.
                 When disabled: No visual indicator is shown for valid pages.
             </string>
+            <!-- Valid Page Badge Timeout -->
+            <string id="CheckValidPageBadgeTimeout">Valid page badge timeout</string>
+            <string id="CheckValidPageBadgeTimeout_Explain">
+                This policy controls the auto-dismiss timeout for the valid page badge in seconds.
+                
+                Set to 0 for no timeout (badge stays visible until manually dismissed).
+                Set to a value between 1 and 300 to automatically dismiss the badge after that many seconds.
+                
+                Default: 5 seconds
+            </string>
             <!-- Page Blocking -->
             <string id="CheckPageBlocking">Enable page blocking</string>
             <string id="CheckPageBlocking_Explain">
@@ -244,6 +254,16 @@
                 When enabled (default): A green badge or indicator shows when users are on a verified Microsoft login page.
                 When disabled: No visual indicator is shown for valid pages.
             </string>
+            <!-- Valid Page Badge Timeout - Chrome -->
+            <string id="CheckValidPageBadgeTimeoutChrome">Valid page badge timeout (Chrome)</string>
+            <string id="CheckValidPageBadgeTimeoutChrome_Explain">
+                This policy controls the auto-dismiss timeout for the valid page badge in seconds in Google Chrome.
+                
+                Set to 0 for no timeout (badge stays visible until manually dismissed).
+                Set to a value between 1 and 300 to automatically dismiss the badge after that many seconds.
+                
+                Default: 5 seconds
+            </string>
             <!-- Page Blocking - Chrome -->
             <string id="CheckPageBlockingChrome">Enable page blocking (Chrome)</string>
             <string id="CheckPageBlockingChrome_Explain">
@@ -375,6 +395,14 @@
             <presentation id="CheckUpdateInterval">
                 <decimalTextBox refId="UpdateInterval"
                                 defaultValue="24">Update Interval (hours):</decimalTextBox>
+            </presentation>
+            <presentation id="CheckValidPageBadgeTimeout">
+                <decimalTextBox refId="CheckValidPageBadgeTimeoutValue"
+                                defaultValue="5">Valid Page Badge Timeout (seconds, 0 = no timeout):</decimalTextBox>
+            </presentation>
+            <presentation id="CheckValidPageBadgeTimeoutChrome">
+                <decimalTextBox refId="CheckValidPageBadgeTimeoutChromeValue"
+                                defaultValue="5">Valid Page Badge Timeout (seconds, 0 = no timeout):</decimalTextBox>
             </presentation>
             <presentation id="CheckCompanyName">
                 <textBox refId="CompanyName">

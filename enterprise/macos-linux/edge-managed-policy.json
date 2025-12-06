@@ -10,6 +10,7 @@
             "knepjpocdagponkonnbggpcnhnaikajg": {
                 "showNotifications": true,
                 "enableValidPageBadge": true,
+                "validPageBadgeTimeout": 5,
                 "enablePageBlocking": true,
                 "enableCippReporting": false,
                 "cippServerUrl": "",
@@ -23,6 +24,15 @@
                     "supportEmail": "",
                     "primaryColor": "#F77F00",
                     "logoUrl": ""
+                },
+                "genericWebhook": {
+                    "enabled": false,
+                    "url": "https://webhook.example.com/endpoint",
+                    "events": [
+                        "detection_alert",
+                        "page_blocked",
+                        "threat_detected"
+                    ]
                 }
             }
         }

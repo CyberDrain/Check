@@ -52,6 +52,9 @@ class CheckOptions {
     this.elements.enableValidPageBadge = document.getElementById(
       "enableValidPageBadge"
     );
+    this.elements.validPageBadgeTimeout = document.getElementById(
+      "validPageBadgeTimeout"
+    );
 
     // Detection settings
     this.elements.customRulesUrl = document.getElementById("customRulesUrl");
@@ -193,6 +196,46 @@ class CheckOptions {
         input.addEventListener("input", () => this.updateBrandingPreview());
       }
     });
+
+    // Validate timeout input
+    if (this.elements.validPageBadgeTimeout) {
+      this.elements.validPageBadgeTimeout.addEventListener("input", (e) => {
+        const input = e.target;
+        let value = input.value;
+        
+        // Remove any non-numeric characters except minus sign at start
+        value = value.replace(/[^\d-]/g, '');
+        
+        // Remove minus signs (we don't allow negative numbers)
+        value = value.replace(/-/g, '');
+        
+        // Parse as integer
+        const numValue = parseInt(value, 10);
+        
+        // If empty or NaN, clear the field
+        if (value === '' || isNaN(numValue)) {
+          input.value = '';
+          return;
+        }
+        
+        // Enforce min/max constraints
+        if (numValue < 0) {
+          input.value = '0';
+        } else if (numValue > 300) {
+          input.value = '300';
+        } else {
+          input.value = numValue.toString();
+        }
+      });
+      
+      // Validate on blur - set to default if empty
+      this.elements.validPageBadgeTimeout.addEventListener("blur", (e) => {
+        const input = e.target;
+        if (input.value === '' || input.value === null) {
+          input.value = '5'; // Reset to default
+        }
+      });
+    }
 
     // Modal actions
     this.elements.modalCancel?.addEventListener("click", () =>
@@ -863,6 +906,10 @@ class CheckOptions {
     this.elements.cippServerUrl = document.getElementById("cippServerUrl");
     this.elements.cippTenantId = document.getElementById("cippTenantId");
 
+    // Force main thread phishing processing (debug)
+    this.elements.forceMainThreadPhishingProcessing = document.getElementById("forceMainThreadPhishingProcessing");
+
+
     if (this.elements.enablePageBlocking) {
       this.elements.enablePageBlocking.checked =
         this.config?.enablePageBlocking !== false;
@@ -877,11 +924,18 @@ class CheckOptions {
     if (this.elements.cippTenantId) {
       this.elements.cippTenantId.value = this.config?.cippTenantId || "";
     }
+    if (this.elements.forceMainThreadPhishingProcessing) {
+      this.elements.forceMainThreadPhishingProcessing.checked = this.config?.forceMainThreadPhishingProcessing || false;
+    }
 
     // UI settings
     this.elements.showNotifications.checked = this.config?.showNotifications;
     this.elements.enableValidPageBadge.checked =
       this.config.enableValidPageBadge || false;
+    this.elements.validPageBadgeTimeout.value =
+      this.config.validPageBadgeTimeout !== undefined
+        ? this.config.validPageBadgeTimeout
+        : 5;
 
     // Detection settings - use top-level customRulesUrl consistently
     this.elements.customRulesUrl.value = this.config?.customRulesUrl || "";
@@ -1120,21 +1174,32 @@ class CheckOptions {
   }
 
   gatherFormData() {
-    const formData = {
+       const formData = {
       // Extension settings
       enablePageBlocking: this.elements.enablePageBlocking?.checked !== false,
       enableCippReporting: this.elements.enableCippReporting?.checked || false,
       cippServerUrl: this.elements.cippServerUrl?.value || "",
       cippTenantId: this.elements.cippTenantId?.value || "",
+      // Debug: force main thread phishing processing
+      forceMainThreadPhishingProcessing: this.elements.forceMainThreadPhishingProcessing?.checked || false,
 
       // UI settings
       showNotifications: this.elements.showNotifications?.checked || false,
       enableValidPageBadge:
         this.elements.enableValidPageBadge?.checked || false,
+      validPageBadgeTimeout: (() => {
+        const value = parseInt(this.elements.validPageBadgeTimeout?.value, 10);
+        if (isNaN(value)) return 5; // Default if invalid
+        return Math.min(300, Math.max(0, value)); // Clamp to 0-300 range
+      })(),
 
       // Detection settings
       customRulesUrl: this.elements.customRulesUrl?.value || "",
-      updateInterval: parseInt(this.elements.updateInterval?.value || 24),
+      updateInterval: (() => {
+        const value = parseInt(this.elements.updateInterval?.value, 10);
+        if (isNaN(value)) return 24; // Default if invalid
+        return Math.min(168, Math.max(1, value)); // Clamp to 1-168 range
+      })(),
 
       // Generic webhook
       genericWebhook: {
@@ -1520,11 +1585,19 @@ class CheckOptions {
         )
         .join("");
 
+      // Code-driven indicators summary
+      const codeDrivenIndicators = config.phishing_indicators.filter(r => r.code_driven);
+      let codeDrivenHtml = '';
+      if (codeDrivenIndicators.length > 0) {
+        codeDrivenHtml = `<div class="config-item"><strong>Code-Driven Indicators:</strong> <span class="config-value">${codeDrivenIndicators.length}</span></div>`;
+      }
+
       sections.push(`
         <div class="config-section">
           <div class="config-section-title">Phishing Indicators (${config.phishing_indicators.length} total)</div>
           <div class="config-item"><strong>Critical Severity Rules:</strong> <span class="config-value">${criticalCount}</span></div>
           ${indicatorSections}
+          ${codeDrivenHtml}
         </div>
       `);
     }

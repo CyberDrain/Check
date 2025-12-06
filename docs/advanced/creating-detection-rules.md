@@ -4,7 +4,7 @@ The extension uses a rule-driven architecture where all detection logic is defin
 
 * **Trusted domain patterns** - Microsoft domains that are always trusted
 * **Exclusion system** - Domains that should never be scanned
-* **Phishing indicators** - Patterns that detect malicious content
+* **Phishing indicators** - Patterns that detect malicious content (supports both regex and code-driven logic)
 * **Detection requirements** - Elements that identify Microsoft 365 login pages
 * **Blocking rules** - Conditions that immediately block pages
 * **Rogue apps detection** - Dynamic detection of known malicious OAuth applications
@@ -70,7 +70,16 @@ These domains get immediate trusted status with valid badges:
 ]
 ```
 
-### Indicators
+## Phishing Indicators
+
+The Check extension supports two types of phishing indicators:
+
+1. **Regex-based indicators** - Traditional pattern matching using regular expressions
+2. **Code-driven indicators** - Advanced logic-based detection using structured operations
+
+### Regex-Based Indicators
+
+Traditional indicators use regular expressions to match patterns in page content:
 
 ```json
 {
@@ -84,6 +93,258 @@ These domains get immediate trusted status with valid badges:
   "confidence": 0.85
 }
 ```
+
+### Code-Driven Indicators
+
+Code-driven indicators allow complex detection logic without regex complexity. Set `code_driven: true` and define your logic in the `code_logic` object:
+
+```json
+{
+  "id": "phi_example_code_driven",
+  "code_driven": true,
+  "code_logic": {
+    "type": "all_of",
+    "operations": [
+      {
+        "type": "substring_present",
+        "values": ["microsoft", "office", "365"]
+      },
+      {
+        "type": "substring_present",
+        "values": ["password", "login"]
+      }
+    ]
+  },
+  "severity": "high",
+  "description": "Microsoft branding with credential fields",
+  "action": "warn",
+  "category": "credential_harvesting",
+  "confidence": 0.8
+}
+```
+
+#### Code-Driven Logic Types
+
+**1. `substring_present`** - Check if substrings are in the page
+
+```json
+{
+  "type": "substring_present",
+  "values": ["microsoft", "office", "365"]
+}
+```
+
+**2. `substring_count`** - Require minimum occurrences
+
+```json
+{
+  "type": "substring_count",
+  "substrings": ["verify", "urgent", "suspended"],
+  "min_count": 2
+}
+```
+
+**3. `substring_proximity`** - Words must appear near each other
+
+```json
+{
+  "type": "substring_proximity",
+  "word1": "urgent",
+  "word2": "action",
+  "max_distance": 500
+}
+```
+
+**4. `multi_proximity`** - Check multiple word pairs
+
+```json
+{
+  "type": "multi_proximity",
+  "pairs": [
+    {"words": ["verify", "account"], "max_distance": 50},
+    {"words": ["suspended", "365"], "max_distance": 50},
+    {"words": ["secure", "microsoft"], "max_distance": 50}
+  ]
+}
+```
+
+**5. `all_of`** - All conditions must match
+
+```json
+{
+  "type": "all_of",
+  "operations": [
+    {
+      "type": "substring_present",
+      "values": ["microsoft"]
+    },
+    {
+      "type": "substring_present",
+      "values": ["password"]
+    }
+  ]
+}
+```
+
+**6. `any_of`** - At least one condition must match
+
+```json
+{
+  "type": "any_of",
+  "operations": [
+    {
+      "type": "substring_proximity",
+      "word1": "urgent",
+      "word2": "action",
+      "max_distance": 500
+    },
+    {
+      "type": "substring_proximity",
+      "word1": "immediate",
+      "word2": "attention",
+      "max_distance": 500
+    }
+  ]
+}
+```
+
+**7. `has_but_not`** - Require some keywords, prohibit others
+
+```json
+{
+  "type": "has_but_not",
+  "required": ["microsoft", "login"],
+  "prohibited": [
+    "sign in with microsoft",
+    "sso",
+    "oauth",
+    "third party auth"
+  ]
+}
+```
+
+**8. `pattern_count`** - Count regex pattern matches
+
+```json
+{
+  "type": "pattern_count",
+  "patterns": ["<form[^>]*action"],
+  "flags": "i",
+  "min_count": 1
+}
+```
+
+**9. `obfuscation_check`** - Detect code obfuscation
+
+```json
+{
+  "type": "obfuscation_check",
+  "indicators": [
+    "eval(atob(",
+    "Function(atob(",
+    "String.fromCharCode",
+    "setInterval(eval("
+  ],
+  "min_matches": 2
+}
+```
+
+**10. `form_action_check`** - Validate form submission targets
+
+```json
+{
+  "type": "form_action_check",
+  "required_domains": ["login.microsoftonline.com"]
+}
+```
+
+**11. `resource_from_domain`** - Verify resource origins
+
+```json
+{
+  "type": "resource_from_domain",
+  "resource_type": "customcss",
+  "allowed_domains": ["aadcdn.msftauthimages.net"],
+  "invert": true
+}
+```
+
+**12. `substring_or_regex`** - Fast substring check with regex fallback
+
+```json
+{
+  "type": "substring_or_regex",
+  "substrings": ["atob(", "unescape(", "eval("],
+  "regex": "(?:var|let|const)\\s+\\w+\\s*=\\s*(?:atob|unescape)\\([^)]+\\)",
+  "flags": "i"
+}
+```
+
+#### Complete Code-Driven Example
+
+Here's a real-world example from the detection rules that detects Microsoft branding combined with urgency tactics:
+
+```json
+{
+  "id": "phi_004",
+  "code_driven": true,
+  "code_logic": {
+    "type": "all_of",
+    "operations": [
+      {
+        "type": "any_of",
+        "operations": [
+          {
+            "type": "substring_proximity",
+            "word1": "urgent",
+            "word2": "action",
+            "max_distance": 500
+          },
+          {
+            "type": "substring_proximity",
+            "word1": "immediate",
+            "word2": "attention",
+            "max_distance": 500
+          },
+          {
+            "type": "substring_proximity",
+            "word1": "act",
+            "word2": "now",
+            "max_distance": 500
+          }
+        ]
+      },
+      {
+        "type": "substring_present",
+        "values": ["microsoft", "office", "365"]
+      }
+    ]
+  },
+  "severity": "medium",
+  "description": "Urgency tactics targeting Microsoft users",
+  "action": "warn",
+  "category": "social_engineering",
+  "confidence": 0.65
+}
+```
+
+This rule triggers when:
+1. Any urgency phrase pair is detected (urgent+action, immediate+attention, or act+now)
+2. AND Microsoft branding keywords are present
+
+#### When to Use Code-Driven vs Regex
+
+**Use Code-Driven When:**
+- You need to check multiple conditions (AND/OR logic)
+- Word proximity matters
+- You want to exclude certain contexts (allowlist patterns)
+- Performance is important (substring checks are faster than complex regex)
+- Rules are easier to maintain and understand
+
+**Use Regex When:**
+- You have a simple, single pattern to match
+- You need complex character matching
+- The pattern is already well-tested as regex
 
 ### Pattern Properties
 

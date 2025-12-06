@@ -71,6 +71,15 @@
       </disabledValue>
     </policy>
 
+    <!-- Valid Page Badge Timeout -->
+    <policy name="CheckValidPageBadgeTimeout" class="Machine" displayName="$(string.CheckValidPageBadgeTimeout)" explainText="$(string.CheckValidPageBadgeTimeout_Explain)" key="SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\knepjpocdagponkonnbggpcnhnaikajg\policy" presentation="$(presentation.CheckValidPageBadgeTimeout)">
+      <parentCategory ref="CheckExtensionEdge" />
+      <supportedOn ref="SUPPORTED_WIN7" />
+      <elements>
+        <decimal id="CheckValidPageBadgeTimeoutValue" valueName="validPageBadgeTimeout" minValue="0" maxValue="300" />
+      </elements>
+    </policy>
+
     <!-- Enable Page Blocking -->
     <policy name="CheckPageBlocking" class="Machine" displayName="$(string.CheckPageBlocking)" explainText="$(string.CheckPageBlocking_Explain)" key="SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\knepjpocdagponkonnbggpcnhnaikajg\policy" valueName="enablePageBlocking">
       <parentCategory ref="CheckExtensionEdge" />
@@ -244,6 +253,15 @@
       <disabledValue>
         <decimal value="0" />
       </disabledValue>
+    </policy>
+
+    <!-- Valid Page Badge Timeout - Chrome -->
+    <policy name="CheckValidPageBadgeTimeoutChrome" class="Machine" displayName="$(string.CheckValidPageBadgeTimeoutChrome)" explainText="$(string.CheckValidPageBadgeTimeoutChrome_Explain)" key="SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\benimdeioplgkhanklclahllklceahbe\policy" presentation="$(presentation.CheckValidPageBadgeTimeoutChrome)">
+      <parentCategory ref="CheckExtensionChrome" />
+      <supportedOn ref="SUPPORTED_WIN7" />
+      <elements>
+        <decimal id="CheckValidPageBadgeTimeoutChromeValue" valueName="validPageBadgeTimeout" minValue="0" maxValue="300" />
+      </elements>
     </policy>
 
     <!-- Page Blocking - Chrome -->

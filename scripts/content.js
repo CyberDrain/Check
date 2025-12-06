@@ -29,20 +29,26 @@ if (window.checkExtensionLoaded) {
   let lastPageSourceScanTime = 0; // When the page source was captured
   let developerConsoleLoggingEnabled = false; // Cache for developer console logging setting
   let showingBanner = false; // Flag to prevent DOM monitoring loops when showing banners
+  let escalatedToBlock = false; // Flag to indicate page has been escalated to block - stop all monitoring
   const MAX_SCANS = 5; // Prevent infinite scanning - reduced for performance
   const SCAN_COOLDOWN = 1200; // 1200ms between scans - increased for performance
+  const THREAT_TRIGGERED_COOLDOWN = 500; // Shorter cooldown for threat-triggered re-scans
   const WARNING_THRESHOLD = 3; // Block if 4+ warning threats found (escalation threshold)
-  let initialBody; // Reference to the initial body element
-
+  const PHISHING_PROCESSING_TIMEOUT = 10000; // 10 second timeout for phishing indicator processing
+  let forceMainThreadPhishingProcessing = false; // Toggle for debugging main thread only
+  const SLOW_PAGE_RESCAN_SKIP_THRESHOLD = 5000; // Don't re-scan if initial scan took > 5s
+  let lastProcessingTime = 0; // Track last phishing indicator processing time
+  let lastPageSourceHash = null; // Hash of page source to detect real changes
+  let threatTriggeredRescanCount = 0; // Track threat-triggered re-scans
+  const MAX_THREAT_TRIGGERED_RESCANS = 2; // Max follow-up scans when threats detected
+  let scheduledRescanTimeout = null; // Track scheduled re-scan timeout
+  const injectedElements = new Set(); // Global tracking for extension-injected elements
   const regexCache = new Map();
   let cachedPageSource = null;
   let cachedPageSourceTime = 0;
   const PAGE_SOURCE_CACHE_TTL = 1000;
-  const domQueryCache = new WeakMap();
-  let cachedStylesheetAnalysis = null;
-
-  // Console log capturing
-  let capturedLogs = [];
+  let capturedLogs = []; // Console log capturing
+  let backgroundProcessingActive = false; // Prevent multiple background processing cycles
   const MAX_LOGS = 100; // Limit the number of stored logs
 
   // Override console methods to capture logs
@@ -153,39 +159,272 @@ if (window.checkExtensionLoaded) {
     return cachedPageSource;
   }
 
-  function clearPerformanceCaches() {
-    cachedPageSource = null;
-    cachedPageSourceTime = 0;
-    domQueryCache.delete(document);
-    cachedStylesheetAnalysis = null;
+  /**
+   * Compute reliable hash of page source to detect changes
+   * Uses djb2 with intelligent sampling for performance + accuracy balance
+   */
+  function computePageSourceHash(pageSource) {
+    if (!pageSource) return null;
+    
+    let hash = 5381;
+    const len = pageSource.length;
+    
+    // Sample ~1000 chars evenly distributed
+    const step = Math.max(1, Math.floor(len / 1000));
+    
+    for (let i = 0; i < len; i += step) {
+      hash = ((hash << 5) + hash) + pageSource.charCodeAt(i); // hash * 33 + c
+    }
+    
+    // Include length for quick size-change detection
+    return `${len}:${hash >>> 0}`;
   }
 
-  function analyzeStylesheets() {
-    if (cachedStylesheetAnalysis) return cachedStylesheetAnalysis;
-    const analysis = { hasMicrosoftCSS: false, cssContent: "", sheets: [] };
+  /**
+   * Check if page source has changed significantly
+   */
+  function hasPageSourceChanged() {
+    const currentSource = document.documentElement.outerHTML; // Direct access to bypass cache
+    const currentHash = computePageSourceHash(currentSource);
+    
+    if (!lastPageSourceHash) {
+      lastPageSourceHash = currentHash;
+      return false; // First check, no previous hash to compare
+    }
+    
+    const changed = currentHash !== lastPageSourceHash;
+    if (changed) {
+      logger.debug(`Page source changed: ${lastPageSourceHash} -> ${currentHash}`);
+      lastPageSourceHash = currentHash;
+    }
+    
+    return changed;
+  }
+
+  /**
+   * Schedule threat-triggered re-scans with progressive delays
+   * Automatically re-scans when threats detected to catch late-loading content
+   */
+  function scheduleThreatTriggeredRescan(threatCount) {
+    // Clear any existing scheduled re-scan
+    if (scheduledRescanTimeout) {
+      clearTimeout(scheduledRescanTimeout);
+      scheduledRescanTimeout = null;
+    }
+    
+    // Don't schedule if we've reached the limit
+    if (threatTriggeredRescanCount >= MAX_THREAT_TRIGGERED_RESCANS) {
+      logger.debug(`Max threat-triggered re-scans (${MAX_THREAT_TRIGGERED_RESCANS}) reached`);
+      return;
+    }
+    
+    // CRITICAL: Skip re-scan if initial scan was very slow (likely legitimate complex page)
+    if (lastProcessingTime > SLOW_PAGE_RESCAN_SKIP_THRESHOLD) {
+      logger.log(
+        `⏭️ Skipping threat-triggered re-scan - initial scan took ${lastProcessingTime}ms ` +
+        `(threshold: ${SLOW_PAGE_RESCAN_SKIP_THRESHOLD}ms). This is likely a legitimate complex application.`
+      );
+      return;
+    }
+    
+    // Progressive delays: 800ms for first re-scan, 2000ms for second
+    const delays = [800, 2000];
+    const delay = delays[threatTriggeredRescanCount] || 2000;
+    
+    logger.log(
+      `⏱️ Scheduling threat-triggered re-scan #${threatTriggeredRescanCount + 1} in ${delay}ms (${threatCount} threat(s) detected)`
+    );
+    
+    threatTriggeredRescanCount++;
+    
+    scheduledRescanTimeout = setTimeout(() => {
+      logger.log(`🔄 Running threat-triggered re-scan #${threatTriggeredRescanCount}`);
+      runProtection(true);
+      scheduledRescanTimeout = null;
+    }, delay);
+  }
+
+  /**
+   * Register an element as injected by the extension
+   * MUST be called immediately after creating any DOM element
+   */
+  function registerInjectedElement(element) {
+    if (element && element.nodeType === Node.ELEMENT_NODE) {
+      injectedElements.add(element);
+      logger.debug(`Registered injected element: ${element.tagName}#${element.id || 'no-id'}`);
+    }
+  }
+
+  /**
+   * Get clean page source with all extension elements removed
+   * This is secure because it uses object references, not selectors
+   */
+  function getCleanPageSource() {
     try {
-      const styleSheets = Array.from(document.styleSheets);
-      for (const sheet of styleSheets) {
-        const sheetInfo = { href: sheet.href || "inline" };
-        if (sheet.href?.match(/msauth|msft|microsoft/i)) {
-          analysis.hasMicrosoftCSS = true;
-        }
-        try {
-          if (sheet.cssRules) {
-            analysis.cssContent +=
-              Array.from(sheet.cssRules)
-                .map((r) => r.cssText)
-                .join(" ") + " ";
-            sheetInfo.accessible = true;
-          }
-        } catch (e) {
-          sheetInfo.accessible = false;
-        }
-        analysis.sheets.push(sheetInfo);
+      // Fast path: if no injected elements, skip cloning
+      if (injectedElements.size === 0) {
+        return document.documentElement.outerHTML;
       }
-    } catch (e) {}
-    cachedStylesheetAnalysis = analysis;
-    return analysis;
+
+      // Clone the entire document
+      const docClone = document.documentElement.cloneNode(true);
+      
+      // Build a map of original nodes to cloned nodes
+      const nodeMap = new Map();
+      const buildNodeMap = (original, clone) => {
+        nodeMap.set(original, clone);
+        const originalChildren = Array.from(original.children || []);
+        const clonedChildren = Array.from(clone.children || []);
+        
+        for (let i = 0; i < originalChildren.length; i++) {
+          if (clonedChildren[i]) {
+            buildNodeMap(originalChildren[i], clonedChildren[i]);
+          }
+        }
+      };
+      
+      try {
+        buildNodeMap(document.documentElement, docClone);
+      } catch (buildMapError) {
+        logger.warn("Error building node map (likely SVG parsing issue), using fallback:", buildMapError.message);
+        // Fallback: return original HTML (extension elements will be included but it's better than crashing)
+        return document.documentElement.outerHTML;
+      }
+      
+      // Remove cloned versions of our injected elements
+      let removed = 0;
+      injectedElements.forEach(originalElement => {
+        try {
+          const clonedElement = nodeMap.get(originalElement);
+          if (clonedElement && clonedElement.parentNode) {
+            clonedElement.parentNode.removeChild(clonedElement);
+            removed++;
+          }
+        } catch (removeError) {
+          // Skip elements that can't be removed
+          logger.debug(`Could not remove element from clone: ${removeError.message}`);
+        }
+      });
+      
+      logger.debug(`Removed ${removed} extension elements from scan`);
+      
+      try {
+        return docClone.outerHTML;
+      } catch (serializeError) {
+        logger.warn("Error serializing cleaned DOM (SVG issue), using original:", serializeError.message);
+        return document.documentElement.outerHTML;
+      }
+    } catch (error) {
+      logger.error("Failed to get clean page source:", error.message);
+      // Ultimate fallback: return original HTML
+      return document.documentElement.outerHTML;
+    }
+  }
+
+  /**
+   * Get clean page text with extension elements removed
+   */
+  function getCleanPageText() {
+    try {
+      // Fast path: if no injected elements, skip cloning
+      if (injectedElements.size === 0) {
+        return document.body?.textContent || '';
+      }
+
+      // Create temporary container
+      const tempDiv = document.createElement('div');
+      tempDiv.style.display = 'none';
+      document.body.appendChild(tempDiv);
+      
+      try {
+        // Clone body
+        const bodyClone = document.body.cloneNode(true);
+        tempDiv.appendChild(bodyClone);
+        
+        // Remove our injected elements from the clone
+        injectedElements.forEach(originalElement => {
+          if (originalElement.isConnected) {
+            try {
+              // Find equivalent element in clone by traversing same path
+              const path = getElementPath(originalElement);
+              const clonedElement = getElementByPath(bodyClone, path);
+              if (clonedElement && clonedElement.parentNode) {
+                clonedElement.parentNode.removeChild(clonedElement);
+              }
+            } catch (pathError) {
+              // Skip elements that can't be found in clone
+              logger.debug(`Could not find element in clone: ${pathError.message}`);
+            }
+          }
+        });
+        
+        return bodyClone.textContent || '';
+      } catch (cloneError) {
+        logger.warn("Error cloning body for text extraction (SVG issue), using original:", cloneError.message);
+        return document.body?.textContent || '';
+      } finally {
+        document.body.removeChild(tempDiv);
+      }
+    } catch (error) {
+      logger.error("Failed to get clean page text:", error.message);
+      // Ultimate fallback: return original text
+      return document.body?.textContent || '';
+    }
+  }
+
+  /**
+   * Get path to element from root (for finding clone)
+   */
+  function getElementPath(element) {
+    const path = [];
+    let current = element;
+    
+    while (current && current !== document.body) {
+      const parent = current.parentNode;
+      if (parent) {
+        const siblings = Array.from(parent.children);
+        path.unshift(siblings.indexOf(current));
+      }
+      current = parent;
+    }
+    
+    return path;
+  }
+
+  /**
+   * Get element by path in a cloned tree
+   */
+  function getElementByPath(root, path) {
+    let current = root;
+    
+    for (const index of path) {
+      if (!current.children || !current.children[index]) {
+        return null;
+      }
+      current = current.children[index];
+    }
+    
+    return current;
+  }
+
+  /**
+   * Cleanup removed elements from tracking
+   */
+  function cleanupInjectedElements() {
+    const toRemove = [];
+    
+    injectedElements.forEach(element => {
+      // If element no longer in DOM, remove from tracking
+      if (!element.isConnected) {
+        toRemove.push(element);
+      }
+    });
+    
+    toRemove.forEach(element => injectedElements.delete(element));
+    
+    if (toRemove.length > 0) {
+      logger.debug(`Cleaned up ${toRemove.length} disconnected elements from tracking`);
+    }
   }
 
   /**
@@ -238,6 +477,58 @@ if (window.checkExtensionLoaded) {
     }
   }
 
+  /**
+   * Consolidated domain trust check - single URL parse for all pattern types
+   * Optimization: Parses URL once and checks all pattern categories
+   * @param {string} url - The URL to check
+   * @returns {Object} Trust status for all categories: { isTrustedLogin, isMicrosoft, isExcluded }
+   */
+  function checkDomainTrust(url) {
+    try {
+      const urlObj = new URL(url);
+      const origin = urlObj.origin;
+      
+      return {
+        isTrustedLogin: matchesAnyPattern(origin, trustedLoginPatterns),
+        isMicrosoft: matchesAnyPattern(origin, microsoftDomainPatterns),
+        isExcluded: checkDomainExclusionByOrigin(origin)
+      };
+    } catch (error) {
+      logger.warn("Invalid URL for domain trust check:", url);
+      return { 
+        isTrustedLogin: false, 
+        isMicrosoft: false, 
+        isExcluded: false 
+      };
+    }
+  }
+
+  /**
+   * Check if origin is in exclusion system (helper for checkDomainTrust)
+   * @param {string} origin - The origin to check
+   * @returns {boolean} - True if origin is excluded
+   */
+  function checkDomainExclusionByOrigin(origin) {
+    if (detectionRules?.exclusion_system?.domain_patterns) {
+      const rulesExcluded =
+        detectionRules.exclusion_system.domain_patterns.some((pattern) => {
+          try {
+            const regex = getCachedRegex(pattern, "i");
+            return regex.test(origin);
+          } catch (error) {
+            logger.warn(`Invalid exclusion pattern: ${pattern}`);
+            return false;
+          }
+        });
+
+      if (rulesExcluded) {
+        logger.log(`✅ URL excluded by detection rules: ${origin}`);
+        return true;
+      }
+    }
+    return checkUserUrlAllowlist(origin);
+  }
+
   // Conditional logger that respects developer console logging setting
   const logger = {
     log: (...args) => {
@@ -274,6 +565,9 @@ if (window.checkExtensionLoaded) {
       developerConsoleLoggingEnabled =
         config.enableDeveloperConsoleLogging === true; // "Developer Mode" in UI
 
+      // Also load forceMainThreadPhishingProcessing
+      forceMainThreadPhishingProcessing = config.forceMainThreadPhishingProcessing === true;
+
       // Only setup console capture if developer mode is enabled
       if (developerConsoleLoggingEnabled) {
         setupConsoleCapture();
@@ -287,20 +581,6 @@ if (window.checkExtensionLoaded) {
         error
       );
     }
-  }
-
-  /**
-   * Re-initialize the DOM observer. This is critical for pages that use
-   * document.write() to replace the entire DOM after initial load.
-   */
-  function reinitializeObserver() {
-    logger.warn("DOM appears to have been replaced. Re-initializing observer.");
-    if (domObserver) {
-      domObserver.disconnect();
-      domObserver = null;
-    }
-    clearPerformanceCaches();
-    setupDomObserver();
   }
 
   /**
@@ -730,7 +1010,6 @@ if (window.checkExtensionLoaded) {
         },
         consoleLogs: capturedLogs.slice(), // Copy the captured logs
         pageSource: lastScannedPageSource || document.documentElement.outerHTML,
-        timestamp: Date.now(),
       };
 
       console.log(
@@ -738,19 +1017,46 @@ if (window.checkExtensionLoaded) {
       );
 
       // Store in chrome storage with URL-based key
+      // Wrap in same structure as popup expects
       const storageKey = `debug_data_${btoa(originalUrl).substring(0, 50)}`;
-      await new Promise((resolve, reject) => {
-        chrome.storage.local.set({ [storageKey]: debugData }, () => {
+      const dataToStore = {
+        url: originalUrl,
+        timestamp: Date.now(),
+        debugData: debugData,
+      };
+      
+      // Use Promise.race with 100ms timeout to avoid blocking phishing page redirect
+      // This ensures user protection is prioritized while still attempting to store debug data
+      const storagePromise = new Promise((resolve, reject) => {
+        chrome.storage.local.set({ [storageKey]: dataToStore }, () => {
           if (chrome.runtime.lastError) {
+            console.error("Storage error:", chrome.runtime.lastError.message);
             reject(chrome.runtime.lastError);
           } else {
-            console.log("Debug data stored before redirect:", storageKey);
-            resolve();
+            console.log("Debug data stored successfully:", storageKey);
+            resolve(true);
           }
         });
       });
+      
+      const timeoutPromise = new Promise((resolve) => {
+        setTimeout(() => {
+          console.warn("Debug data storage timeout (100ms) - proceeding with block for user safety");
+          resolve(false);
+        }, 100);
+      });
+      
+      const completed = await Promise.race([storagePromise, timeoutPromise]);
+      
+      // If timeout was reached, continue storage in background (fire-and-forget)
+      if (completed === false) {
+        storagePromise.catch((err) => {
+          console.error("Background storage failed:", err?.message || String(err));
+        });
+      }
     } catch (error) {
-      console.error("Failed to store debug data before redirect:", error);
+      console.error("Failed to store debug data before redirect:", error?.message || String(error));
+      // Continue with redirect even if storage fails - user protection is priority
     }
   }
 
@@ -834,7 +1140,8 @@ if (window.checkExtensionLoaded) {
     console.log("Is Trusted Domain:", isTrusted);
 
     // Check M365 detection
-    const isMSLogon = isMicrosoftLogonPage();
+    const msDetection = detectMicrosoftElements();
+    const isMSLogon = msDetection.isLogonPage;
     console.log("Detected as M365 Login:", isMSLogon);
 
     // Run phishing indicators
@@ -921,144 +1228,47 @@ if (window.checkExtensionLoaded) {
   };
 
   /**
-   * Check if page has ANY Microsoft-related elements (lower threshold than full detection)
-   * Used to determine if phishing indicators should be checked
+   * Unified Microsoft element detection with rich results
+   * Optimization: Single scan that calculates both logon page and element presence
+   * @returns {Object} Detection results: { isLogonPage, hasElements, primaryFound, totalWeight, totalElements, foundElements }
    */
-  function hasMicrosoftElements() {
+  function detectMicrosoftElements() {
     try {
+      // Check domain exclusion first
       const isExcludedDomain = checkDomainExclusion(window.location.href);
       if (isExcludedDomain) {
         logger.log(
           `✅ Domain excluded from scanning - skipping Microsoft elements check: ${window.location.href}`
         );
-        return false; // Skip phishing indicators for excluded domains
+        return {
+          isLogonPage: false,
+          hasElements: false,
+          primaryFound: 0,
+          totalWeight: 0,
+          totalElements: 0,
+          foundElements: [],
+          pageSource: null
+        };
       }
 
       if (!detectionRules?.m365_detection_requirements) {
-        return false;
+        logger.error("No M365 detection requirements in rules");
+        return {
+          isLogonPage: false,
+          hasElements: false,
+          primaryFound: 0,
+          totalWeight: 0,
+          totalElements: 0,
+          foundElements: [],
+          pageSource: null
+        };
       }
 
       const requirements = detectionRules.m365_detection_requirements;
       const pageSource = getPageSource();
       const pageText = document.body?.textContent || "";
-
-      // Lower threshold - just need ANY Microsoft-related elements
-      let totalWeight = 0;
-      let totalElements = 0;
-
-      const allElements = [
-        ...(requirements.primary_elements || []),
-        ...(requirements.secondary_elements || []),
-      ];
-
-      for (const element of allElements) {
-        try {
-          let found = false;
-
-          if (element.type === "source_content") {
-            const regex = new RegExp(element.pattern, "i");
-            found = regex.test(pageSource);
-          } else if (element.type === "css_pattern") {
-            found = element.patterns.some((pattern) => {
-              const regex = new RegExp(pattern, "i");
-              return regex.test(pageSource);
-            });
-          } else if (element.type === "url_pattern") {
-            found = element.patterns.some((pattern) => {
-              const regex = new RegExp(pattern, "i");
-              return regex.test(window.location.href);
-            });
-          } else if (element.type === "text_content") {
-            found = element.patterns.some((pattern) => {
-              const regex = new RegExp(pattern, "i");
-              return regex.test(pageText);
-            });
-          }
-
-          if (found) {
-            totalWeight += element.weight || 1;
-            totalElements++;
-          }
-        } catch (error) {
-          logger.warn(`Error checking element ${element.category}:`, error);
-        }
-      }
-
-      // Tightened threshold - require either:
-      // 1. At least one primary element (Microsoft-specific), OR
-      // 2. High weight secondary elements (weight >= 4), OR
-      // 3. Multiple secondary elements (3+) with decent weight (>= 3)
-      const primaryElements = allElements.filter(
-        (el) => el.category === "primary"
-      );
-      const foundPrimaryElements = [];
-
-      // Check if any primary elements were found
-      for (const element of primaryElements) {
-        try {
-          let found = false;
-
-          if (element.type === "source_content") {
-            const regex = new RegExp(element.pattern, "i");
-            found = regex.test(pageSource);
-          } else if (element.type === "css_pattern") {
-            found = element.patterns.some((pattern) => {
-              const regex = new RegExp(pattern, "i");
-              return regex.test(pageSource);
-            });
-          }
-
-          if (found) {
-            foundPrimaryElements.push(element.id);
-          }
-        } catch (error) {
-          // Skip invalid patterns
-        }
-      }
-
-      const hasElements =
-        foundPrimaryElements.length > 0 ||
-        totalWeight >= 4 ||
-        (totalElements >= 3 && totalWeight >= 3);
-
-      if (hasElements) {
-        if (foundPrimaryElements.length > 0) {
-          logger.log(
-            `🔍 Microsoft-specific elements detected (Primary: ${foundPrimaryElements.join(
-              ", "
-            )}) - will check phishing indicators`
-          );
-        } else {
-          logger.log(
-            `🔍 High-confidence Microsoft elements detected (Weight: ${totalWeight}, Elements: ${totalElements}) - will check phishing indicators`
-          );
-        }
-      } else {
-        logger.log(
-          `📄 Insufficient Microsoft indicators (Weight: ${totalWeight}, Elements: ${totalElements}, Primary: ${foundPrimaryElements.length}) - skipping phishing indicators for performance`
-        );
-      }
-
-      return hasElements;
-    } catch (error) {
-      logger.error("Error in hasMicrosoftElements:", error.message);
-      return true; // Default to checking on error to be safe
-    }
-  }
-
-  /**
-   * Check if page is Microsoft 365 logon page using categorized detection
-   * Requirements: Primary elements are Microsoft-specific, secondary are supporting evidence
-   */
-  function isMicrosoftLogonPage() {
-    try {
-      if (!detectionRules?.m365_detection_requirements) {
-        logger.error("No M365 detection requirements in rules");
-        return false;
-      }
-
-      const requirements = detectionRules.m365_detection_requirements;
-      const pageSource = getPageSource();
+      const pageTitle = document.title || "";
+      const metaTags = Array.from(document.querySelectorAll('meta'));
 
       // Store the page source for debugging purposes
       lastScannedPageSource = pageSource;
@@ -1070,12 +1280,12 @@ if (window.checkExtensionLoaded) {
       const foundElementsList = [];
       const missingElementsList = [];
 
-      // Check primary elements (Microsoft-specific)
       const allElements = [
         ...(requirements.primary_elements || []),
         ...(requirements.secondary_elements || []),
       ];
 
+      // Single loop - check all elements once
       for (const element of allElements) {
         try {
           let found = false;
@@ -1083,8 +1293,48 @@ if (window.checkExtensionLoaded) {
           if (element.type === "source_content") {
             const regex = new RegExp(element.pattern, "i");
             found = regex.test(pageSource);
+          } else if (element.type === "page_title") {
+            found = element.patterns.some((pattern) => {
+              const regex = new RegExp(pattern, "i");
+              return regex.test(pageTitle);
+            });
+            
+            if (found) {
+              logger.debug(`✓ Page title matched: "${pageTitle}"`);
+            }
+          } else if (element.type === "meta_tag") {
+            const metaAttr = element.attribute;
+            
+            found = metaTags.some(meta => {
+              let content = "";
+              
+              if (metaAttr === "description") {
+                content = meta.getAttribute("name") === "description" 
+                  ? meta.getAttribute("content") || ""
+                  : "";
+              } else if (metaAttr.startsWith("og:")) {
+                content = meta.getAttribute("property") === metaAttr
+                  ? meta.getAttribute("content") || ""
+                  : "";
+              } else {
+                content = meta.getAttribute("name") === metaAttr
+                  ? meta.getAttribute("content") || ""
+                  : "";
+              }
+              
+              if (content) {
+                return element.patterns.some(pattern => {
+                  const regex = new RegExp(pattern, "i");
+                  return regex.test(content);
+                });
+              }
+              return false;
+            });
+            
+            if (found) {
+              logger.debug(`✓ Meta tag matched: ${metaAttr}`);
+            }
           } else if (element.type === "css_pattern") {
-            // Check for CSS patterns in the page source
             found = element.patterns.some((pattern) => {
               const regex = new RegExp(pattern, "i");
               return regex.test(pageSource);
@@ -1120,6 +1370,16 @@ if (window.checkExtensionLoaded) {
                 );
               }
             }
+          } else if (element.type === "url_pattern") {
+            found = element.patterns.some((pattern) => {
+              const regex = new RegExp(pattern, "i");
+              return regex.test(window.location.href);
+            });
+          } else if (element.type === "text_content") {
+            found = element.patterns.some((pattern) => {
+              const regex = new RegExp(pattern, "i");
+              return regex.test(pageText);
+            });
           }
 
           if (found) {
@@ -1151,94 +1411,91 @@ if (window.checkExtensionLoaded) {
         }
       }
 
-      // New categorized detection logic with flexible thresholds
+      // Calculate thresholds for logon page detection (strict)
       const thresholds = requirements.detection_thresholds || {};
       const minPrimary = thresholds.minimum_primary_elements || 1;
       const minWeight = thresholds.minimum_total_weight || 4;
       const minTotal = thresholds.minimum_elements_overall || 3;
-      const minSecondaryOnlyWeight =
-        thresholds.minimum_secondary_only_weight || 6;
-      const minSecondaryOnlyElements =
-        thresholds.minimum_secondary_only_elements || 5;
+      const minSecondaryOnlyWeight = thresholds.minimum_secondary_only_weight || 9;
+      const minSecondaryOnlyElements = thresholds.minimum_secondary_only_elements || 7;
 
-      let isM365Page = false;
+      let isLogonPage = false;
 
       if (primaryFound > 0) {
-        // If we have primary elements, use normal thresholds
-        isM365Page =
+        isLogonPage =
           primaryFound >= minPrimary &&
           totalWeight >= minWeight &&
           totalElements >= minTotal;
       } else {
-        // If NO primary elements, require higher secondary evidence
-        // This catches phishing simulations while preventing false positives like GitHub
-        isM365Page =
+        isLogonPage =
           totalWeight >= minSecondaryOnlyWeight &&
           totalElements >= minSecondaryOnlyElements;
       }
 
-      if (primaryFound > 0) {
-        logger.log(
-          `M365 logon detection (with primary): Primary=${primaryFound}/${minPrimary}, Weight=${totalWeight}/${minWeight}, Total=${totalElements}/${minTotal}`
-        );
-      } else {
-        logger.log(
-          `M365 logon detection (secondary only): Weight=${totalWeight}/${minSecondaryOnlyWeight}, Total=${totalElements}/${minSecondaryOnlyElements}`
-        );
-      }
-      logger.log(`Found elements: [${foundElementsList.join(", ")}]`);
-      if (missingElementsList.length > 0) {
-        logger.log(`Missing elements: [${missingElementsList.join(", ")}]`);
-      }
+      // Calculate hasElements (looser threshold for element presence)
+      const hasElements =
+        primaryFound > 0 ||
+        totalWeight >= 4 ||
+        (totalElements >= 3 && totalWeight >= 3);
 
-      // Enhanced debugging - show what we're actually looking for
-      logger.debug("=== DETECTION DEBUG INFO ===");
-      logger.debug(`Page URL: ${window.location.href}`);
-      logger.debug(`Page title: ${document.title}`);
-      logger.debug(`Page source length: ${pageSource.length} chars`);
-
-      // Debug each pattern individually
-      for (const element of allElements) {
-        if (element.type === "source_content") {
-          const regex = new RegExp(element.pattern, "i");
-          const matches = pageSource.match(regex);
-          logger.debug(
-            `${element.category} pattern "${element.pattern}" -> ${
-              matches ? "FOUND" : "NOT FOUND"
-            }`
+      // Logging
+      if (isLogonPage) {
+        if (primaryFound > 0) {
+          logger.log(
+            `M365 logon detection (with primary): Primary=${primaryFound}/${minPrimary}, Weight=${totalWeight}/${minWeight}, Total=${totalElements}/${minTotal}`
           );
-          if (matches) logger.debug(`  Match: "${matches[0]}"`);
-        } else if (element.type === "css_pattern") {
-          element.patterns.forEach((pattern, idx) => {
-            const regex = new RegExp(pattern, "i");
-            const matches = pageSource.match(regex);
-            logger.debug(
-              `${element.category} CSS pattern[${idx}] "${pattern}" -> ${
-                matches ? "FOUND" : "NOT FOUND"
-              }`
-            );
-            if (matches) logger.debug(`  Match: "${matches[0]}"`);
-          });
+        } else {
+          logger.log(
+            `M365 logon detection (secondary only): Weight=${totalWeight}/${minSecondaryOnlyWeight}, Total=${totalElements}/${minSecondaryOnlyElements}`
+          );
         }
-      }
-      logger.debug("=== END DEBUG INFO ===");
-
-      const resultMessage = isM365Page
-        ? "✅ DETECTED as Microsoft 365 logon page"
-        : "❌ NOT DETECTED as Microsoft 365 logon page";
-
-      logger.log(`🎯 Detection Result: ${resultMessage}`);
-
-      if (isM365Page) {
+        logger.log(`Found elements: [${foundElementsList.join(", ")}]`);
+        if (missingElementsList.length > 0) {
+          logger.log(`Missing elements: [${missingElementsList.join(", ")}]`);
+        }
+        logger.log(`🎯 Detection Result: ✅ DETECTED as Microsoft 365 logon page`);
         logger.log(
           "📋 Next step: Analyzing if this is legitimate or phishing attempt..."
         );
+      } else if (hasElements) {
+        if (primaryFound > 0) {
+          logger.log(
+            `🔍 Microsoft-specific elements detected (Primary: ${foundElementsList.filter(id => {
+              const elem = allElements.find(e => e.id === id);
+              return elem?.category === "primary";
+            }).join(", ")}) - will check phishing indicators`
+          );
+        } else {
+          logger.log(
+            `🔍 High-confidence Microsoft elements detected (Weight: ${totalWeight}, Elements: ${totalElements}) - will check phishing indicators`
+          );
+        }
+      } else {
+        logger.log(
+          `📄 Insufficient Microsoft indicators (Weight: ${totalWeight}, Elements: ${totalElements}, Primary: ${primaryFound}) - skipping phishing indicators for performance`
+        );
       }
 
-      return isM365Page;
+      return {
+        isLogonPage,
+        hasElements,
+        primaryFound,
+        totalWeight,
+        totalElements,
+        foundElements: foundElementsList,
+        pageSource
+      };
     } catch (error) {
-      logger.error("M365 logon page detection failed:", error.message);
-      return false; // Fail closed - don't assume it's MS page if detection fails
+      logger.error("Error in detectMicrosoftElements:", error.message);
+      return {
+        isLogonPage: false,
+        hasElements: true, // Fail open for element detection
+        primaryFound: 0,
+        totalWeight: 0,
+        totalElements: 0,
+        foundElements: [],
+        pageSource: null
+      };
     }
   }
 
@@ -1544,6 +1801,286 @@ if (window.checkExtensionLoaded) {
   }
 
   /**
+   * Detection Primitives Engine
+   * Generic, reusable detection logic controlled 100% by rules file
+   */
+  const DetectionPrimitives = {
+    /**
+     * Check if any of the values are present in source
+     */
+    substring_present: (source, params) => {
+      const lower = source.toLowerCase();
+      return params.values.some(val => lower.includes(val.toLowerCase()));
+    },
+
+    /**
+     * Check if ALL values are present in source
+     */
+    all_substrings_present: (source, params) => {
+      const lower = source.toLowerCase();
+      return params.values.every(val => lower.includes(val.toLowerCase()));
+    },
+
+    /**
+     * Check if two words are within max_distance characters of each other
+     */
+    substring_proximity: (source, params) => {
+      const lower = source.toLowerCase();
+      const word1 = params.word1.toLowerCase();
+      const word2 = params.word2.toLowerCase();
+      
+      const idx1 = lower.indexOf(word1);
+      if (idx1 === -1) return false;
+      
+      // Search in a window around word1
+      const searchStart = Math.max(0, idx1 - params.max_distance);
+      const searchEnd = Math.min(lower.length, idx1 + word1.length + params.max_distance);
+      const chunk = lower.slice(searchStart, searchEnd);
+      
+      return chunk.includes(word2);
+    },
+
+    /**
+     * Check if minimum number of substrings are present
+     */
+    substring_count: (source, params) => {
+      const lower = source.toLowerCase();
+      const count = params.substrings.filter(sub => 
+        lower.includes(sub.toLowerCase())
+      ).length;
+      
+      return count >= params.min_count && 
+            count <= (params.max_count || Infinity);
+    },
+
+    /**
+     * Check if required substrings are present but prohibited ones are not
+     */
+    has_but_not: (source, params) => {
+      const lower = source.toLowerCase();
+      
+      // Check if any required substring is present
+      const hasRequired = params.required.some(req => 
+        lower.includes(req.toLowerCase())
+      );
+      
+      if (!hasRequired) return false;
+      
+      // Check if any prohibited substring is present
+      const hasProhibited = params.prohibited.some(pro => 
+        lower.includes(pro.toLowerCase())
+      );
+      
+      return !hasProhibited;
+    },
+
+    /**
+     * Check if patterns match within allowed count range
+     */
+    pattern_count: (source, params) => {
+      let totalCount = 0;
+      
+      for (const pattern of params.patterns) {
+        const regex = new RegExp(pattern, params.flags || 'gi');
+        const matches = source.match(regex);
+        totalCount += matches ? matches.length : 0;
+      }
+      
+      return totalCount >= params.min_count && 
+            totalCount <= (params.max_count || Infinity);
+    },
+
+    /**
+     * Check word density (occurrences per 1000 characters)
+     */
+    word_density: (source, params) => {
+      const lower = source.toLowerCase();
+      let totalCount = 0;
+      
+      for (const word of params.words) {
+        const regex = new RegExp(`\\b${word.toLowerCase()}\\b`, 'g');
+        const matches = lower.match(regex);
+        totalCount += matches ? matches.length : 0;
+      }
+      
+      const density = totalCount / (source.length / 1000);
+      return density >= params.min_density;
+    },
+
+    /**
+     * Check if substring appears before another
+     */
+    substring_before: (source, params) => {
+      const lower = source.toLowerCase();
+      const idx1 = lower.indexOf(params.first.toLowerCase());
+      const idx2 = lower.indexOf(params.second.toLowerCase());
+      
+      return idx1 !== -1 && idx2 !== -1 && idx1 < idx2;
+    },
+
+    /**
+     * Check if substring is within position range
+     */
+    substring_in_range: (source, params) => {
+      const lower = source.toLowerCase();
+      const idx = lower.indexOf(params.substring.toLowerCase());
+      
+      if (idx === -1) return false;
+      
+      return idx >= (params.min_position || 0) && 
+            idx <= (params.max_position || Infinity);
+    },
+
+    /**
+     * Composite: ALL operations must match
+     */
+    all_of: (source, params, context) => {
+      return params.operations.every(op => 
+        evaluatePrimitive(source, op, context)
+      );
+    },
+
+    /**
+     * Composite: ANY operation must match
+     */
+    any_of: (source, params, context) => {
+      return params.operations.some(op => 
+        evaluatePrimitive(source, op, context)
+      );
+    },
+
+    /**
+     * Check if resource URLs match pattern
+     */
+    resource_pattern: (source, params) => {
+      const pattern = new RegExp(params.pattern, params.flags || 'i');
+      
+      // Extract URLs from common attributes
+      const urlRegex = /(?:src|href|action)=["']([^"']+)["']/gi;
+      const urls = [...source.matchAll(urlRegex)].map(m => m[1]);
+      
+      const matchCount = urls.filter(url => pattern.test(url)).length;
+      
+      return matchCount >= (params.min_count || 1) && 
+            matchCount <= (params.max_count || Infinity);
+    },
+
+    /**
+     * Check if resources come from allowed domains
+     */
+    resource_from_domain: (source, params) => {
+      const resourceType = params.resource_type;
+      const allowedDomains = params.allowed_domains;
+      
+      // Find all resources of this type
+      const resourceRegex = new RegExp(
+        `(?:src|href)=["']([^"']*${resourceType}[^"']*)["']`, 
+        'gi'
+      );
+      const resources = [...source.matchAll(resourceRegex)].map(m => m[1]);
+      
+      if (resources.length === 0) return false;
+      
+      // Check if ALL resources are from allowed domains
+      return resources.every(res => 
+        allowedDomains.some(domain => res.includes(domain))
+      );
+    },
+
+    /**
+     * Check multiple proximity pairs
+     */
+    multi_proximity: (source, params) => {
+      const lower = source.toLowerCase();
+      
+      for (const pair of params.pairs) {
+        const word1 = pair.words[0].toLowerCase();
+        const word2 = pair.words[1].toLowerCase();
+        const maxDist = pair.max_distance;
+        
+        let idx1 = -1;
+        while ((idx1 = lower.indexOf(word1, idx1 + 1)) !== -1) {
+          const searchStart = Math.max(0, idx1 - maxDist);
+          const searchEnd = Math.min(lower.length, idx1 + word1.length + maxDist);
+          const chunk = lower.slice(searchStart, searchEnd);
+          
+          if (chunk.includes(word2)) {
+            return true; // Found one matching pair
+          }
+        }
+      }
+      
+      return false;
+    },
+
+    /**
+     * Check if form action doesn't contain required domains
+     */
+    form_action_check: (source, params) => {
+      const formRegex = /<form[^>]*action=["']([^"']*)["'][^>]*>/gi;
+      const actions = [...source.matchAll(formRegex)].map(m => m[1]);
+      
+      if (actions.length === 0) return false;
+      
+      const requiredDomains = params.required_domains;
+      const suspiciousForms = actions.filter(action => 
+        !requiredDomains.some(domain => action.includes(domain))
+      );
+      
+      return suspiciousForms.length > 0;
+    },
+
+    /**
+     * Check obfuscation patterns
+     */
+    obfuscation_check: (source, params) => {
+      const indicators = params.indicators;
+      let matchCount = 0;
+      
+      for (const indicator of indicators) {
+        if (source.includes(indicator)) {
+          matchCount++;
+        }
+      }
+      
+      return matchCount >= params.min_matches;
+    }
+  };
+
+  /**
+   * Evaluate a single primitive operation
+   */
+  function evaluatePrimitive(source, operation, context = {}) {
+    const primitive = DetectionPrimitives[operation.type];
+    
+    if (!primitive) {
+      logger.warn(`Unknown primitive type: ${operation.type}`);
+      return false;
+    }
+    
+    try {
+      // Check cache first
+      const cacheKey = `${operation.type}:${JSON.stringify(operation)}`;
+      if (context.cache && context.cache.has(cacheKey)) {
+        return context.cache.get(cacheKey);
+      }
+      
+      const result = primitive(source, operation, context);
+      const finalResult = operation.invert ? !result : result;
+      
+      // Cache result
+      if (context.cache) {
+        context.cache.set(cacheKey, finalResult);
+      }
+      
+      return finalResult;
+    } catch (error) {
+      logger.error(`Primitive ${operation.type} failed:`, error.message);
+      return false;
+    }
+  }
+
+  /**
    * Process phishing indicators using Web Worker for background processing
    */
   async function processPhishingIndicatorsInBackground(
@@ -1705,23 +2242,29 @@ if (window.checkExtensionLoaded) {
    * Process phishing indicators from detection rules
    */
   async function processPhishingIndicators() {
+    const startTime = Date.now(); // Track processing time
     try {
       const currentUrl = window.location.href;
 
-      // Debug logging
       logger.log(
         `🔍 processPhishingIndicators: detectionRules available: ${!!detectionRules}`
       );
 
       if (!detectionRules?.phishing_indicators) {
         logger.warn("No phishing indicators available");
+        lastProcessingTime = Date.now() - startTime; // Track even for early exit
         return { threats: [], score: 0 };
       }
 
       const threats = [];
       let totalScore = 0;
-      const pageSource = getPageSource();
-      const pageText = document.body?.textContent || "";
+      
+      // CRITICAL FIX: Use clean page source with extension elements removed
+      const pageSource = injectedElements.size > 0 ? getCleanPageSource() : getPageSource();
+      const pageText = injectedElements.size > 0 ? getCleanPageText() : (document.body?.textContent || "");
+      
+      // Cleanup disconnected elements before processing
+      cleanupInjectedElements();
 
       logger.log(
         `🔍 Testing ${detectionRules.phishing_indicators.length} phishing indicators against:`
@@ -1729,11 +2272,11 @@ if (window.checkExtensionLoaded) {
       logger.log(`   - Page source length: ${pageSource.length} chars`);
       logger.log(`   - Page text length: ${pageText.length} chars`);
       logger.log(`   - Current URL: ${currentUrl}`);
+      logger.log(`   - Injected elements excluded: ${injectedElements.size}`);
 
       // Check for legitimate context indicators
       const legitimateContext = checkLegitimateContext(pageText, pageSource);
 
-      // For pages with legitimate context, log but continue with detection
       if (legitimateContext) {
         logger.log(
           `📋 Legitimate context detected - continuing with phishing detection`
@@ -1747,83 +2290,111 @@ if (window.checkExtensionLoaded) {
         logger.log(`   ${i + 1}. ${ind.id}: ${ind.pattern} (${ind.severity})`);
       });
 
-      // Performance protection: Add timeout mechanism
-      const startTime = Date.now();
-      const PROCESSING_TIMEOUT = 5000; // Standard timeout
-      let processedCount = 0;
+      // If forceMainThreadPhishingProcessing is enabled, skip Web Worker and use main thread directly
+      if (forceMainThreadPhishingProcessing) {
+        logger.log("⏱️ DEBUG: Forcing main thread phishing processing (Web Worker disabled by UI toggle)");
+      } else {
+        // Try Web Worker for background processing first with timeout protection
+        logger.log(`⏱️ PERF: Attempting background processing with Web Worker`);
+        try {
+          const timeoutMs = PHISHING_PROCESSING_TIMEOUT;
+          const backgroundPromise = processPhishingIndicatorsInBackground(
+            detectionRules.phishing_indicators,
+            pageSource,
+            pageText,
+            currentUrl
+          );
+          const resultPromise = timeoutMs
+            ? Promise.race([
+                backgroundPromise,
+                new Promise((_, reject) =>
+                  setTimeout(
+                    () => reject(new Error('Web Worker timeout')),
+                    timeoutMs
+                  )
+                ),
+              ])
+            : backgroundPromise;
 
-      // Try Web Worker for background processing first
-      logger.log(`⏱️ PERF: Attempting background processing with Web Worker`);
-      try {
-        const backgroundResult = await processPhishingIndicatorsInBackground(
-          detectionRules.phishing_indicators,
-          pageSource,
-          pageText,
-          currentUrl
-        );
+          const backgroundResult = await resultPromise;
 
-        if (
-          backgroundResult &&
-          (backgroundResult.threats.length > 0 || backgroundResult.score >= 0)
-        ) {
-          logger.log(`⏱️ PERF: Background processing completed successfully`);
+          if (
+            backgroundResult &&
+            (backgroundResult.threats.length > 0 || backgroundResult.score >= 0)
+          ) {
+            const processingTime = Date.now() - startTime;
+            lastProcessingTime = processingTime; // CRITICAL: Track time
 
-          // Apply context filtering and SSO checks to background results
-          const filteredThreats = [];
-          for (const threat of backgroundResult.threats) {
-            let includeThread = true;
-
-            // Apply context_required filtering from rules
-            const indicator = detectionRules.phishing_indicators.find(
-              (ind) => ind.id === threat.id
+            logger.log(
+              `⏱️ PERF: Background processing completed successfully in ${processingTime}ms`
             );
-            if (indicator?.context_required) {
-              let contextFound = false;
-              for (const requiredContext of indicator.context_required) {
-                if (
-                  pageSource
-                    .toLowerCase()
-                    .includes(requiredContext.toLowerCase()) ||
-                  pageText.toLowerCase().includes(requiredContext.toLowerCase())
-                ) {
-                  contextFound = true;
-                  break;
+
+            // Apply context filtering and SSO checks to background results
+            const filteredThreats = [];
+            for (const threat of backgroundResult.threats) {
+              let includeThread = true;
+
+              const indicator = detectionRules.phishing_indicators.find(
+                (ind) => ind.id === threat.id
+              );
+              if (indicator?.context_required) {
+                let contextFound = false;
+                for (const requiredContext of indicator.context_required) {
+                  if (
+                    pageSource
+                      .toLowerCase()
+                      .includes(requiredContext.toLowerCase()) ||
+                    pageText.toLowerCase().includes(requiredContext.toLowerCase())
+                  ) {
+                    contextFound = true;
+                    break;
+                  }
+                }
+                if (!contextFound) {
+                  includeThread = false;
+                  logger.debug(
+                    `🚫 ${threat.id} excluded - required context not found`
+                  );
                 }
               }
-              if (!contextFound) {
-                includeThread = false;
-                logger.debug(
-                  `🚫 ${threat.id} excluded - required context not found`
-                );
+
+              if (
+                includeThread &&
+                (threat.id === "phi_001_enhanced" || threat.id === "phi_002")
+              ) {
+                const hasLegitimateSSO = checkLegitimateSSO(pageText, pageSource);
+                if (hasLegitimateSSO) {
+                  includeThread = false;
+                  logger.debug(
+                    `🚫 ${threat.id} excluded - legitimate SSO detected`
+                  );
+                }
+              }
+
+              if (includeThread) {
+                filteredThreats.push(threat);
               }
             }
 
-            // Apply SSO exclusion from rules
-            if (
-              includeThread &&
-              (threat.id === "phi_001_enhanced" || threat.id === "phi_002")
-            ) {
-              const hasLegitimateSSO = checkLegitimateSSO(pageText, pageSource);
-              if (hasLegitimateSSO) {
-                includeThread = false;
-                logger.debug(
-                  `🚫 ${threat.id} excluded - legitimate SSO detected`
-                );
-              }
-            }
+            logger.log(
+              `⏱️ Phishing indicators check (Web Worker): ${filteredThreats.length} threats found, ` +
+              `score: ${backgroundResult.score}, processing time: ${processingTime}ms`
+            );
 
-            if (includeThread) {
-              filteredThreats.push(threat);
-            }
+            // Log per-indicator processing time if available (Web Worker cannot measure per-indicator, so log total only)
+            // If you want per-indicator, use main thread fallback below.
+
+            return { threats: filteredThreats, score: backgroundResult.score };
           }
-
-          return { threats: filteredThreats, score: backgroundResult.score };
+        } catch (workerError) {
+          const failureTime = Date.now() - startTime;
+          // CRITICAL FIX: Track time even on Web Worker failure before falling back
+          lastProcessingTime = failureTime;
+          logger.warn(
+            `Web Worker processing failed after ${failureTime}ms, falling back to main thread:`,
+            workerError.message
+          );
         }
-      } catch (workerError) {
-        logger.warn(
-          "Web Worker processing failed, falling back to main thread:",
-          workerError.message
-        );
       }
 
       // Fallback to main thread processing with requestIdleCallback optimization
@@ -1834,6 +2405,7 @@ if (window.checkExtensionLoaded) {
           const threats = [];
           let totalScore = 0;
           let processedCount = 0;
+          const mainThreadStartTime = Date.now();
 
           const processNextBatch = async () => {
             const BATCH_SIZE = 2; // Smaller batches for idle processing
@@ -1843,45 +2415,150 @@ if (window.checkExtensionLoaded) {
               detectionRules.phishing_indicators.length
             );
 
+
             for (let i = startIdx; i < endIdx; i++) {
               const indicator = detectionRules.phishing_indicators[i];
               processedCount++;
-
+              const indicatorStart = performance.now();
               try {
                 let matches = false;
                 let matchDetails = "";
 
-                const pattern = new RegExp(
-                  indicator.pattern,
-                  indicator.flags || "i"
-                );
+                // Modular code-driven logic if flagged in rules file
+                if (indicator.code_driven === true && indicator.code_logic) {
+                  if (DetectionPrimitives[indicator.code_logic.type]) {
+                    try {
+                      matches = evaluatePrimitive(pageSource, indicator.code_logic, { cache: new Map() });
+                      if (matches) matchDetails = "primitive match";
+                    } catch (primitiveError) {
+                      logger.warn(`Primitive evaluation failed for ${indicator.id}, falling back:`, primitiveError.message);
+                      // Fall through to legacy code-driven logic below
+                    }
+                  }
+                  if (indicator.code_logic.type === "substring") {
+                    // All substrings must be present
+                    matches = (indicator.code_logic.substrings || []).every(sub => pageSource.includes(sub));
+                    if (matches) matchDetails = "page source (substring match)";
+                  } else if (indicator.code_logic.type === "substring_not") {
+                    // All substrings must be present, and all not_substrings must be absent
+                    matches = (indicator.code_logic.substrings || []).every(sub => pageSource.includes(sub)) &&
+                              (indicator.code_logic.not_substrings || []).every(sub => !pageSource.includes(sub));
+                    if (matches) matchDetails = "page source (substring + not match)";
+                  } else if (indicator.code_logic.type === "allowlist") {
+                    // If any allowlist phrase is present, skip
+                    const lowerSource = pageSource.toLowerCase();
+                    const isAllowlisted = (indicator.code_logic.allowlist || []).some(phrase => lowerSource.includes(phrase));
+                    if (!isAllowlisted) {
+                      // Use optimized regex from rules file
+                      if (indicator.code_logic.optimized_pattern) {
+                        const optPattern = new RegExp(indicator.code_logic.optimized_pattern, indicator.flags || "i");
+                        if (optPattern.test(pageSource)) {
+                          matches = true;
+                          matchDetails = "page source (optimized regex)";
+                        }
+                      }
+                    }
+                  } else if (indicator.code_logic.type === "substring_not_allowlist") {
+                    // Check if substring is present, then verify it's not from an allowed source
+                    const substring = indicator.code_logic.substring;
+                    const allowlist = indicator.code_logic.allowlist || [];
+                    
+                    if (substring && pageSource.includes(substring)) {
+                      // Substring found, now check if any allowlisted domain is also present
+                      const lowerSource = pageSource.toLowerCase();
+                      const isAllowed = allowlist.some(allowed => 
+                        lowerSource.includes(allowed.toLowerCase())
+                      );
+                      
+                      if (!isAllowed) {
+                        matches = true;
+                        matchDetails = "page source (substring not in allowlist)";
+                      }
+                    }
+                  } else if (indicator.code_logic.type === "substring_or_regex") {
+                    // Try fast substring search first, fall back to regex
+                    const substrings = indicator.code_logic.substrings || [];
+                    const lowerSource = pageSource.toLowerCase();
+                    
+                    // Fast path: check if any substring is present
+                    for (const sub of substrings) {
+                      if (lowerSource.includes(sub.toLowerCase())) {
+                        matches = true;
+                        matchDetails = "page source (substring match)";
+                        break;
+                      }
+                    }
+                    
+                    // Fallback: use regex if no substring matched
+                    if (!matches && indicator.code_logic.regex) {
+                      const pattern = new RegExp(indicator.code_logic.regex, indicator.code_logic.flags || "i");
+                      if (pattern.test(pageSource)) {
+                        matches = true;
+                        matchDetails = "page source (regex match)";
+                      }
+                    }
+                  } else if (indicator.code_logic.type === "substring_with_exclusions") {
+                    // Check for matching patterns but exclude if exclusion phrases are present
+                    const lowerSource = pageSource.toLowerCase();
+                    
+                    // First check exclusions - if any found, skip this rule entirely
+                    const excludeList = indicator.code_logic.exclude_if_contains || [];
+                    const hasExclusion = excludeList.some(excl => 
+                      lowerSource.includes(excl.toLowerCase())
+                    );
+                    
+                    if (!hasExclusion) {
+                      // No exclusions found, now check for matches
+                      if (indicator.code_logic.match_any) {
+                        // Simple match - check if any phrase is present
+                        matches = indicator.code_logic.match_any.some(phrase => 
+                          lowerSource.includes(phrase.toLowerCase())
+                        );
+                        if (matches) matchDetails = "page source (substring with exclusions)";
+                      } else if (indicator.code_logic.match_pattern_parts) {
+                        // Complex match - all pattern parts must be present
+                        const parts = indicator.code_logic.match_pattern_parts;
+                        matches = parts.every(partGroup => 
+                          partGroup.some(part => lowerSource.includes(part.toLowerCase()))
+                        );
+                        if (matches) matchDetails = "page source (pattern parts with exclusions)";
+                      }
+                    }
+                  }
+                } else {
+                  // Default: regex-driven logic
+                  const pattern = new RegExp(
+                    indicator.pattern,
+                    indicator.flags || "i"
+                  );
 
-                // Test against page source
-                if (pattern.test(pageSource)) {
-                  matches = true;
-                  matchDetails = "page source";
-                }
-                // Test against visible text
-                else if (pattern.test(pageText)) {
-                  matches = true;
-                  matchDetails = "page text";
-                }
-                // Test against URL
-                else if (pattern.test(currentUrl)) {
-                  matches = true;
-                  matchDetails = "URL";
-                }
+                  // Test against page source
+                  if (pattern.test(pageSource)) {
+                    matches = true;
+                    matchDetails = "page source";
+                  }
+                  // Test against visible text
+                  else if (pattern.test(pageText)) {
+                    matches = true;
+                    matchDetails = "page text";
+                  }
+                  // Test against URL
+                  else if (pattern.test(currentUrl)) {
+                    matches = true;
+                    matchDetails = "URL";
+                  }
 
-                // Handle additional_checks
-                if (!matches && indicator.additional_checks) {
-                  for (const check of indicator.additional_checks) {
-                    if (
-                      pageSource.includes(check) ||
-                      pageText.includes(check)
-                    ) {
-                      matches = true;
-                      matchDetails = "additional checks";
-                      break;
+                  // Handle additional_checks
+                  if (!matches && indicator.additional_checks) {
+                    for (const check of indicator.additional_checks) {
+                      if (
+                        pageSource.includes(check) ||
+                        pageText.includes(check)
+                      ) {
+                        matches = true;
+                        matchDetails = "additional checks";
+                        break;
+                      }
                     }
                   }
                 }
@@ -1963,17 +2640,176 @@ if (window.checkExtensionLoaded) {
                   logger.warn(
                     `🚨 PHISHING INDICATOR DETECTED: ${indicator.id} - ${indicator.description}`
                   );
+
+                  // PERFORMANCE: Early exit immediately when blocking threshold is reached
+                  // Don't waste resources processing more indicators if we're already going to block
+                  const blockThreats = threats.filter(t => t.action === 'block').length;
+                  const criticalThreats = threats.filter(t => t.severity === 'critical').length;
+                  const highSeverityThreats = threats.filter(
+                    t => t.severity === 'high' || t.severity === 'critical'
+                  ).length;
+
+                  // Exit early if:
+                  // 1. Any blocking threat found (action='block')
+                  // 2. Any critical severity threat found (instant block)
+                  // 3. Multiple high/critical severity threats exceed escalation threshold
+                  if (highSeverityThreats >= WARNING_THRESHOLD) {
+                    const totalTime = Date.now() - startTime;
+                    lastProcessingTime = totalTime;
+                    
+                    logger.log(
+                      `⚡ EARLY EXIT: Blocking threshold reached after processing ${processedCount}/${detectionRules.phishing_indicators.length} indicators`
+                    );
+                    logger.log(
+                      `   - Block threats: ${blockThreats}`
+                    );
+                    logger.log(
+                      `   - Critical threats: ${criticalThreats}`
+                    );
+                    logger.log(
+                      `   - High+ severity threats: ${highSeverityThreats}/${WARNING_THRESHOLD}`
+                    );
+                    logger.log(
+                      `⏱️ Phishing indicators check (Main Thread - EARLY EXIT): ${threats.length} threats found, ` +
+                      `score: ${totalScore}, time: ${totalTime}ms`
+                    );
+                    resolve({ threats, score: totalScore });
+                    return; // Exit immediately - stop all processing
+                  }
                 }
               } catch (error) {
                 logger.warn(
                   `Error processing phishing indicator ${indicator.id}:`,
                   error.message
                 );
+              } finally {
+                const indicatorEnd = performance.now();
+                logger.log(
+                  `⏱️ Phishing indicator [${indicator.id}] processed in ${(indicatorEnd - indicatorStart).toFixed(2)} ms`
+                );
               }
             }
 
             // Continue processing if more indicators remain
             if (processedCount < detectionRules.phishing_indicators.length) {
+              // Check timeout for main thread processing
+              const mainThreadElapsed = Date.now() - mainThreadStartTime;
+              if (mainThreadElapsed > PHISHING_PROCESSING_TIMEOUT) {
+                const totalTime = Date.now() - startTime;
+                lastProcessingTime = totalTime; // CRITICAL: Track time on timeout
+                
+                logger.warn(
+                  `⚠️ Main thread processing timeout after ${mainThreadElapsed}ms, ` +
+                  `processed ${processedCount}/${detectionRules.phishing_indicators.length} indicators`
+                );
+                logger.log(
+                  `⏱️ Phishing indicators check (Main Thread - TIMEOUT): ${threats.length} threats found, ` +
+                  `score: ${totalScore}, total time: ${totalTime}ms`
+                );
+                
+                // Resolve immediately with current results for display
+                resolve({ threats, score: totalScore });
+                
+                // Prevent multiple background processing cycles
+                if (backgroundProcessingActive) {
+                  logger.log(`🔄 Background processing already active, skipping`);
+                  return;
+                }
+                backgroundProcessingActive = true;
+                
+                // Continue processing remaining indicators in background
+                const remainingIndicators = detectionRules.phishing_indicators.slice(processedCount);
+                logger.log(`🔄 Continuing to process ${remainingIndicators.length} remaining indicators in background`);
+                
+                // Process remaining indicators asynchronously
+                setTimeout(async () => {
+                  let backgroundThreatsFound = false;
+                  
+                  for (const indicator of remainingIndicators) {
+                    try {
+                      const indicatorStart = performance.now();
+                      let matches = false;
+                      let matchDetails = "";
+                      
+                      // Use same code-driven or regex logic
+                      if (indicator.code_driven === true && indicator.code_logic) {
+                        // Same code-driven logic as above
+                        const lowerSource = pageSource.toLowerCase();
+                        
+                        if (indicator.code_logic.type === "substring_or_regex") {
+                          for (const sub of (indicator.code_logic.substrings || [])) {
+                            if (lowerSource.includes(sub.toLowerCase())) {
+                              matches = true;
+                              matchDetails = "page source (substring match)";
+                              break;
+                            }
+                          }
+                          if (!matches && indicator.code_logic.regex) {
+                            const pattern = new RegExp(indicator.code_logic.regex, indicator.code_logic.flags || "i");
+                            if (pattern.test(pageSource)) {
+                              matches = true;
+                              matchDetails = "page source (regex match)";
+                            }
+                          }
+                        } else if (indicator.code_logic.type === "substring_with_exclusions") {
+                          const excludeList = indicator.code_logic.exclude_if_contains || [];
+                          const hasExclusion = excludeList.some(excl => lowerSource.includes(excl.toLowerCase()));
+                          
+                          if (!hasExclusion) {
+                            if (indicator.code_logic.match_any) {
+                              matches = indicator.code_logic.match_any.some(phrase => 
+                                lowerSource.includes(phrase.toLowerCase())
+                              );
+                            } else if (indicator.code_logic.match_pattern_parts) {
+                              // Handle pattern parts - all groups must match
+                              const parts = indicator.code_logic.match_pattern_parts;
+                              matches = parts.every(partGroup => 
+                                partGroup.some(part => lowerSource.includes(part.toLowerCase()))
+                              );
+                            }
+                          }
+                        }
+                      } else {
+                        const pattern = new RegExp(indicator.pattern, indicator.flags || "i");
+                        if (pattern.test(pageSource)) {
+                          matches = true;
+                          matchDetails = "page source";
+                        }
+                      }
+                      
+                      if (matches) {
+                        logger.log(`🔄 Background processing found threat: ${indicator.id}`);
+                        backgroundThreatsFound = true;
+                        
+                        // Check if we need to escalate to block mode
+                        if (indicator.severity === 'critical' || indicator.action === 'block') {
+                          logger.warn(`⚠️ Critical threat detected in background processing: ${indicator.id}`);
+                          // Don't trigger re-scan immediately, just log it
+                          // The threat will be picked up on next regular scan or page interaction
+                          logger.warn(`💡 Critical threat logged - will be applied on next scan`);
+                        }
+                      }
+                      
+                      const indicatorEnd = performance.now();
+                      logger.log(`⏱️ Background indicator [${indicator.id}] processed in ${(indicatorEnd - indicatorStart).toFixed(2)} ms`);
+                    } catch (error) {
+                      logger.warn(`Error in background processing of ${indicator.id}:`, error.message);
+                    }
+                  }
+                  
+                  backgroundProcessingActive = false;
+                  logger.log(`✅ Background processing completed. Threats found: ${backgroundThreatsFound}`);
+                  
+                  // If critical threats were found in background and we're not already showing a block page
+                  // schedule a re-scan for next user interaction
+                  if (backgroundThreatsFound && !escalatedToBlock) {
+                    logger.log(`📋 Critical threats found in background - will re-scan on next page change`);
+                  }
+                }, 100);
+                
+                return;
+              }
+
               // Use requestIdleCallback if available, otherwise setTimeout
               if (window.requestIdleCallback) {
                 requestIdleCallback(processNextBatch, { timeout: 100 });
@@ -1982,6 +2818,14 @@ if (window.checkExtensionLoaded) {
               }
             } else {
               // Processing complete
+              const mainThreadTime = Date.now() - mainThreadStartTime;
+              const totalTime = Date.now() - startTime;
+              lastProcessingTime = totalTime; // CRITICAL: Track time on success
+              
+              logger.log(
+                `⏱️ Phishing indicators check (Main Thread): ${threats.length} threats found, ` +
+                `score: ${totalScore}, processing time: ${mainThreadTime}ms, total time: ${totalTime}ms`
+              );
               resolve({ threats, score: totalScore });
             }
           };
@@ -1993,13 +2837,14 @@ if (window.checkExtensionLoaded) {
         processWithIdleCallback();
       });
 
-      const processingTime = Date.now() - startTime;
-      logger.log(
-        `Phishing indicators check: ${threats.length} threats found, score: ${totalScore} (${processingTime}ms)`
-      );
-      return { threats, score: totalScore };
     } catch (error) {
-      logger.error("Error processing phishing indicators:", error.message);
+      const processingTime = Date.now() - startTime;
+      lastProcessingTime = processingTime; // CRITICAL: Track time on error
+      
+      logger.error(
+        `Error processing phishing indicators after ${processingTime}ms:`, 
+        error.message
+      );
       return { threats: [], score: 0 };
     }
   }
@@ -2009,26 +2854,14 @@ if (window.checkExtensionLoaded) {
    * Now includes both detection rules exclusions AND user-configured URL allowlist
    */
   function checkDomainExclusion(url) {
-    const urlObj = new URL(url);
-    const origin = urlObj.origin;
-    if (detectionRules?.exclusion_system?.domain_patterns) {
-      const rulesExcluded =
-        detectionRules.exclusion_system.domain_patterns.some((pattern) => {
-          try {
-            const regex = new RegExp(pattern, "i");
-            return regex.test(origin);
-          } catch (error) {
-            logger.warn(`Invalid exclusion pattern: ${pattern}`);
-            return false;
-          }
-        });
-
-      if (rulesExcluded) {
-        logger.log(`✅ URL excluded by detection rules: ${origin}`);
-        return true;
-      }
+    try {
+      const urlObj = new URL(url);
+      const origin = urlObj.origin;
+      return checkDomainExclusionByOrigin(origin);
+    } catch (error) {
+      logger.warn("Invalid URL for domain exclusion check:", url);
+      return false;
     }
-    return checkUserUrlAllowlist(origin);
   }
 
   /**
@@ -2118,24 +2951,6 @@ if (window.checkExtensionLoaded) {
 
     const content = (pageText + " " + pageSource).toLowerCase();
     return detectionRules.exclusion_system.context_indicators.legitimate_contexts.some(
-      (context) => {
-        return content.includes(context.toLowerCase());
-      }
-    );
-  }
-
-  /**
-   * Check for suspicious context indicators that override legitimate exclusions
-   */
-  function checkSuspiciousContext(pageText) {
-    if (
-      !detectionRules?.exclusion_system?.context_indicators?.suspicious_contexts
-    ) {
-      return false;
-    }
-
-    const content = pageText.toLowerCase();
-    return detectionRules.exclusion_system.context_indicators.suspicious_contexts.some(
       (context) => {
         return content.includes(context.toLowerCase());
       }
@@ -2415,17 +3230,45 @@ if (window.checkExtensionLoaded) {
    * Main protection logic following CORRECTED specification
    */
   async function runProtection(isRerun = false) {
+    // Early exit if page has been escalated to block
+    if (escalatedToBlock) {
+      logger.log(
+        `🛑 runProtection() called but page already escalated to block - ignoring`
+      );
+      return;
+    }
+
+    // Early exit if a banner is already displayed and this is a re-run
+    if (isRerun && showingBanner) {
+      logger.log(
+        `🛑 runProtection() called but banner already displayed - ignoring re-scan`
+      );
+      return;
+    }
+
     try {
       logger.log(
         `🚀 Starting protection analysis ${
           isRerun ? "(re-run)" : "(initial)"
         } for ${window.location.href}`
       );
-      logger.log(
-        `📄 Page info: ${document.querySelectorAll("*").length} elements, ${
-          document.body?.textContent?.length || 0
-        } chars content`
-      );
+      let cleanedSourceLength = null;
+      if (typeof arguments[1] === "object" && arguments[1]?.scanCleaned) {
+        // If scanCleaned is true, get cleaned page source length
+        const cleanedSource = getCleanPageSource();
+        cleanedSourceLength = cleanedSource ? cleanedSource.length : null;
+        logger.log(
+          `📄 Page info: ${document.querySelectorAll("*").length} elements, ${
+            document.body?.textContent?.length || 0
+          } chars content | Cleaned page source: ${cleanedSourceLength || "N/A"} chars`
+        );
+      } else {
+        logger.log(
+          `📄 Page info: ${document.querySelectorAll("*").length} elements, ${
+            document.body?.textContent?.length || 0
+          } chars content`
+        );
+      }
 
       if (isInIframe()) {
         logger.log("⚠️ Page is in an iframe");
@@ -2497,15 +3340,30 @@ if (window.checkExtensionLoaded) {
       // Rate limiting for DOM change re-runs
       if (isRerun) {
         const now = Date.now();
-        if (now - lastScanTime < SCAN_COOLDOWN || scanCount >= MAX_SCANS) {
-          logger.debug("Scan rate limited or max scans reached");
+        const isThreatTriggeredRescan = threatTriggeredRescanCount > 0 && threatTriggeredRescanCount <= MAX_THREAT_TRIGGERED_RESCANS;
+        const cooldown = isThreatTriggeredRescan ? THREAT_TRIGGERED_COOLDOWN : SCAN_COOLDOWN;
+        
+        if (now - lastScanTime < cooldown || scanCount >= MAX_SCANS) {
+          logger.debug(`Scan rate limited (cooldown: ${cooldown}ms) or max scans reached`);
           return;
         }
+        
+        // Check if page source actually changed
+        if (!hasPageSourceChanged() && !isThreatTriggeredRescan) {
+          logger.debug("Page source unchanged, skipping re-scan");
+          return;
+        }
+        
         lastScanTime = now;
         scanCount++;
       } else {
         protectionActive = true;
         scanCount = 1;
+        threatTriggeredRescanCount = 0; // Reset counter on initial run
+        
+        // Initialize page source hash
+        const currentSource = getPageSource();
+        lastPageSourceHash = computePageSourceHash(currentSource);
       }
 
       logger.log(
@@ -2554,19 +3412,22 @@ if (window.checkExtensionLoaded) {
       // Step 2: FIRST CHECK - trusted origins and Microsoft domains
       const currentOrigin = location.origin.toLowerCase();
 
+      // Optimization: Single consolidated domain trust check (parses URL once)
+      const domainTrust = checkDomainTrust(window.location.href);
+
       // Debug logging for domain detection
       logger.debug(`Checking origin: "${currentOrigin}"`);
       logger.debug(`Trusted login patterns:`, trustedLoginPatterns);
       logger.debug(`Microsoft domain patterns:`, microsoftDomainPatterns);
       logger.debug(
-        `Is trusted login domain: ${isTrustedLoginDomain(window.location.href)}`
+        `Is trusted login domain: ${domainTrust.isTrustedLogin}`
       );
       logger.debug(
-        `Is Microsoft domain: ${isMicrosoftDomain(window.location.href)}`
+        `Is Microsoft domain: ${domainTrust.isMicrosoft}`
       );
 
       // Check for trusted login domains (these get valid badges)
-      if (isTrustedLoginDomain(window.location.href)) {
+      if (domainTrust.isTrustedLogin) {
         logger.log(
           "✅ TRUSTED ORIGIN - No phishing possible, exiting immediately"
         );
@@ -2745,7 +3606,7 @@ if (window.checkExtensionLoaded) {
       }
 
       // Check for general Microsoft domains (non-login pages)
-      if (isMicrosoftDomain(window.location.href)) {
+      if (domainTrust.isMicrosoft) {
         logger.log(
           "ℹ️ MICROSOFT DOMAIN (NON-LOGIN) - No phishing scan needed, no badge shown"
         );
@@ -2768,8 +3629,7 @@ if (window.checkExtensionLoaded) {
       }
 
       // Step 3: Check for domain exclusion (trusted domains) - same level as Microsoft domains
-      const isExcludedDomain = checkDomainExclusion(window.location.href);
-      if (isExcludedDomain) {
+      if (domainTrust.isExcluded) {
         logger.log(
           `✅ EXCLUDED TRUSTED DOMAIN - No scanning needed, exiting immediately`
         );
@@ -2816,12 +3676,10 @@ if (window.checkExtensionLoaded) {
       );
 
       // Step 5: Check if page is an MS logon page (using rule file requirements)
-      const isMSLogon = isMicrosoftLogonPage();
-      if (!isMSLogon) {
+      const msDetection = detectMicrosoftElements();
+      if (!msDetection.isLogonPage) {
         // Check if page has ANY Microsoft-related elements before running expensive phishing indicators
-        const hasMSElements = hasMicrosoftElements();
-
-        if (!hasMSElements) {
+        if (!msDetection.hasElements) {
           logger.log(
             "✅ Page analysis result: Site appears legitimate (not Microsoft-related, no phishing indicators checked)"
           );
@@ -2882,7 +3740,7 @@ if (window.checkExtensionLoaded) {
               logger.error(
                 "🛡️ PROTECTION ACTIVE: Blocking page due to critical phishing indicators"
               );
-              showBlockingOverlay(reason, {
+              await showBlockingOverlay(reason, {
                 threats: criticalThreats,
                 score: phishingResult.score,
               });
@@ -2984,7 +3842,7 @@ if (window.checkExtensionLoaded) {
                 logger.error(
                   "🛡️ PROTECTION ACTIVE: Blocking page due to escalated warning threats"
                 );
-                showBlockingOverlay(reason, {
+                await showBlockingOverlay(reason, {
                   threats: warningThreats,
                   score: phishingResult.score,
                   escalated: true,
@@ -3017,6 +3875,11 @@ if (window.checkExtensionLoaded) {
               showWarningBanner(`SUSPICIOUS CONTENT DETECTED: ${reason}`, {
                 threats: warningThreats,
               });
+              
+              // Schedule threat-triggered re-scan to catch additional late-loading threats
+              if (!isRerun && warningThreats.length > 0) {
+                scheduleThreatTriggeredRescan(warningThreats.length);
+              }
             }
 
             const redirectHostname = extractRedirectHostname(location.href);
@@ -3300,7 +4163,7 @@ if (window.checkExtensionLoaded) {
             logger.warn("Failed to send page_blocked webhook:", err.message);
           });
           
-          showBlockingOverlay(blockingResult.reason, blockingResult);
+          await showBlockingOverlay(blockingResult.reason, blockingResult);
           disableFormSubmissions();
           disableCredentialInputs();
           stopDOMMonitoring();
@@ -3416,7 +4279,7 @@ if (window.checkExtensionLoaded) {
             logger.warn("Failed to send page_blocked webhook:", err.message);
           });
           
-          showBlockingOverlay(reason, {
+          await showBlockingOverlay(reason, {
             threats: criticalBlockingRules.map((rule) => ({
               description: rule.description,
               severity: "critical",
@@ -3531,6 +4394,11 @@ if (window.checkExtensionLoaded) {
           phishingIndicators: criticalThreats.map((t) => t.id),
         };
 
+        // Schedule threat-triggered re-scan to catch additional late-loading threats
+        if (!isRerun && criticalThreats.length > 0) {
+          scheduleThreatTriggeredRescan(criticalThreats.length);
+        }
+
         if (protectionEnabled) {
           logger.error(
             "🛡️ PROTECTION ACTIVE: Blocking page due to critical phishing indicators"
@@ -3554,7 +4422,7 @@ if (window.checkExtensionLoaded) {
             logger.warn("Failed to send page_blocked webhook:", err.message);
           });
           
-          showBlockingOverlay(reason, {
+          await showBlockingOverlay(reason, {
             threats: criticalThreats,
             score: phishingResult.score,
           });
@@ -3634,7 +4502,7 @@ if (window.checkExtensionLoaded) {
             logger.error(
               "🛡️ PROTECTION ACTIVE: Blocking due to very low detection score"
             );
-            showBlockingOverlay(reason, {
+            await showBlockingOverlay(reason, {
               threats: [{ description: reason, severity: "high" }],
               score: detectionResult.score,
             });
@@ -3744,7 +4612,7 @@ if (window.checkExtensionLoaded) {
               logger.warn("Failed to send page_blocked webhook:", err.message);
             });
             
-            showBlockingOverlay(reason, lastDetectionResult);
+            await showBlockingOverlay(reason, lastDetectionResult);
             disableFormSubmissions();
             disableCredentialInputs();
             stopDOMMonitoring(); // Stop monitoring once blocked
@@ -3760,6 +4628,11 @@ if (window.checkExtensionLoaded) {
               setupDOMMonitoring();
               setupDynamicScriptMonitoring();
             }
+          }
+          
+          // Schedule threat-triggered re-scan for high/medium threats
+          if (!isRerun && allThreats.length > 0) {
+            scheduleThreatTriggeredRescan(allThreats.length);
           }
         } else {
           logger.warn(`⚠️ ANALYSIS: MEDIUM THREAT detected - ${reason}`);
@@ -3779,6 +4652,11 @@ if (window.checkExtensionLoaded) {
           if (!isRerun) {
             setupDOMMonitoring();
             setupDynamicScriptMonitoring();
+          }
+          
+          // Schedule threat-triggered re-scan for medium threats
+          if (!isRerun && allThreats.length > 0) {
+            scheduleThreatTriggeredRescan(allThreats.length);
           }
         }
 
@@ -3915,6 +4793,7 @@ if (window.checkExtensionLoaded) {
   /**
    * Set up DOM monitoring to catch delayed phishing content
    */
+  let domScanTimeout = null; // Debounce timer for DOM-triggered scans
   function setupDOMMonitoring() {
     try {
       // Don't set up multiple observers
@@ -3931,8 +4810,14 @@ if (window.checkExtensionLoaded) {
         `Body content length: ${document.body?.textContent?.length || 0} chars`
       );
 
-      domObserver = new MutationObserver(async (mutations) => {
+  domObserver = new MutationObserver(async (mutations) => {
         try {
+          // Immediately exit if page has been escalated to block
+          if (escalatedToBlock) {
+            logger.debug("🛑 Page escalated to block - ignoring DOM mutations");
+            return;
+          }
+          
           let shouldRerun = false;
           let newElementsAdded = false;
 
@@ -3942,6 +4827,12 @@ if (window.checkExtensionLoaded) {
               // Check for added forms, inputs, or scripts
               for (const node of mutation.addedNodes) {
                 if (node.nodeType === Node.ELEMENT_NODE) {
+                  // Skip extension-injected elements (banner, badges, overlays, etc.)
+                  if (injectedElements.has(node)) {
+                    logger.debug(`Skipping extension-injected element: ${node.tagName?.toLowerCase()} (ID: ${node.id})`);
+                    continue;
+                  }
+                  
                   newElementsAdded = true;
                   const tagName = node.tagName?.toLowerCase();
 
@@ -4043,7 +4934,7 @@ if (window.checkExtensionLoaded) {
             if (shouldRerun) break;
           }
 
-          if (shouldRerun && !showingBanner) {
+          if (shouldRerun && !showingBanner && !escalatedToBlock) {
             // Check scan rate limiting
             if (scanCount >= MAX_SCANS) {
               logger.log(
@@ -4053,19 +4944,33 @@ if (window.checkExtensionLoaded) {
             }
 
             logger.log(
-              "🔄 Significant DOM changes detected - re-running protection analysis"
+              "🔄 Significant DOM changes detected - scheduling protection analysis (debounced)"
             );
             logger.log(
               `Page now has ${document.querySelectorAll("*").length} elements`
             );
-            // Enhanced debounce delay from 500ms to 1000ms for performance
-            setTimeout(() => {
+            // Debounce: clear any pending scan and schedule a new one
+            if (domScanTimeout) {
+              clearTimeout(domScanTimeout);
+            }
+            domScanTimeout = setTimeout(() => {
               runProtection(true);
+              domScanTimeout = null;
             }, 1000);
+          } else if (escalatedToBlock) {
+            logger.debug("🛑 Page escalated to block - ignoring DOM changes during debounce check");
           } else if (showingBanner) {
             logger.debug(
-              "🚫 Ignoring DOM changes while banner is being displayed"
+              "🔍 DOM changes detected while banner is displayed - scanning cleaned page source (debounced)"
             );
+            // Debounce: clear any pending scan and schedule a new one
+            if (domScanTimeout) {
+              clearTimeout(domScanTimeout);
+            }
+            domScanTimeout = setTimeout(() => {
+              runProtection(true, { scanCleaned: true });
+              domScanTimeout = null;
+            }, 1000);
           } else if (newElementsAdded) {
             logger.debug(
               "🔍 DOM changes detected but not significant enough to re-run analysis"
@@ -4085,10 +4990,20 @@ if (window.checkExtensionLoaded) {
 
       // Fallback: Check periodically for content that might have loaded without triggering observer
       const checkInterval = setInterval(() => {
+        // Stop if page has been escalated to block
+        if (escalatedToBlock) {
+          logger.debug("🛑 Page escalated to block - stopping fallback timer");
+          clearInterval(checkInterval);
+          return;
+        }
+        
         if (showingBanner) {
           logger.debug(
-            "🚫 Fallback timer skipping check while banner is displayed"
+            "🔍 Fallback timer scanning cleaned page source while banner is displayed"
           );
+          // Scan cleaned page source (banner and injected elements removed)
+          runProtection(true, { scanCleaned: true });
+          clearInterval(checkInterval);
           return;
         }
 
@@ -4108,6 +5023,11 @@ if (window.checkExtensionLoaded) {
       setTimeout(() => {
         clearInterval(checkInterval);
         stopDOMMonitoring();
+        // Also clear any pending DOM scan debounce
+        if (domScanTimeout) {
+          clearTimeout(domScanTimeout);
+          domScanTimeout = null;
+        }
         logger.log("🛑 DOM monitoring timeout reached - stopping");
       }, 30000);
     } catch (error) {
@@ -4125,6 +5045,13 @@ if (window.checkExtensionLoaded) {
         domObserver = null;
         logger.log("DOM monitoring stopped");
       }
+      
+      // Also clear any scheduled threat-triggered re-scans
+      if (scheduledRescanTimeout) {
+        clearTimeout(scheduledRescanTimeout);
+        scheduledRescanTimeout = null;
+        logger.log("Cleared scheduled threat-triggered re-scan");
+      }
     } catch (error) {
       logger.error("Failed to stop DOM monitoring:", error.message);
     }
@@ -4133,8 +5060,15 @@ if (window.checkExtensionLoaded) {
   /**
    * Block page by redirecting to Chrome blocking page - NO USER OVERRIDE
    */
-  function showBlockingOverlay(reason, analysisData) {
+  async function showBlockingOverlay(reason, analysisData) {
     try {
+      // CRITICAL: Set escalated to block flag FIRST to prevent any further scans
+      escalatedToBlock = true;
+      
+      // CRITICAL: Immediately stop all monitoring and processing to save resources
+      // The page is being blocked, so no further analysis is needed
+      stopDOMMonitoring();
+      
       logger.log(
         "Redirecting to Chrome blocking page for security - no user override allowed"
       );
@@ -4183,7 +5117,8 @@ if (window.checkExtensionLoaded) {
       logger.log("Enriched blocking details:", blockingDetails);
 
       // Store debug data before redirect so it can be retrieved on blocked page
-      storeDebugDataBeforeRedirect(location.href, analysisData);
+      // IMPORTANT: Wait for storage to complete before redirecting to avoid race condition
+      await storeDebugDataBeforeRedirect(location.href, analysisData);
 
       // Encode the details for the blocking page
       const encodedDetails = encodeURIComponent(
@@ -4200,50 +5135,46 @@ if (window.checkExtensionLoaded) {
     } catch (error) {
       logger.error("Failed to redirect to blocking page:", error.message);
 
-      // Fallback: Replace page content entirely if redirect fails
+      // Fallback: Replace page content
       try {
-        document.documentElement.innerHTML = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Site Blocked - Microsoft 365 Protection</title>
-          <style>
-            body {
-              font-family: system-ui, -apple-system, sans-serif;
-              background: #f5f5f5;
-              margin: 0;
-              padding: 40px;
-              text-align: center;
-            }
-            .container {
-              max-width: 600px;
-              margin: 0 auto;
-              background: white;
-              padding: 40px;
-              border-radius: 8px;
-              box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            }
-            .icon { font-size: 64px; color: #d32f2f; margin-bottom: 24px; }
-            h1 { color: #d32f2f; margin: 0 0 16px 0; }
-            p { color: #555; line-height: 1.6; }
-            .reason { color: #777; font-size: 14px; margin-top: 24px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="icon">🛡️</div>
-            <h1>Phishing Site Blocked</h1>
+        // Create fallback overlay
+        const overlay = document.createElement("div");
+        overlay.id = "ms365-blocking-overlay";
+        overlay.style.cssText = `
+          position: fixed !important;
+          top: 0 !important;
+          left: 0 !important;
+          width: 100% !important;
+          height: 100% !important;
+          background: white !important;
+          z-index: 2147483647 !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        `;
+        
+        // CRITICAL: Register overlay before adding to DOM
+        registerInjectedElement(overlay);
+        
+        overlay.innerHTML = `
+          <div style="max-width: 600px; padding: 40px; text-align: center; font-family: system-ui, -apple-system, sans-serif;">
+            <div style="font-size: 64px; color: #d32f2f; margin-bottom: 24px;">🛡️</div>
+            <h1 style="color: #d32f2f; margin: 0 0 16px 0;">Phishing Site Blocked</h1>
             <p><strong>Microsoft 365 login page detected on suspicious domain.</strong></p>
             <p>This site may be attempting to steal your credentials and has been blocked for your protection.</p>
-            <div class="reason">Reason: ${reason}</div>
-            <div class="reason">Blocked by: Check</div>
-            <div class="reason">No override available - contact your administrator if this is incorrect</div>
+            <div style="color: #777; font-size: 14px; margin-top: 24px;">Reason: ${reason}</div>
+            <div style="color: #777; font-size: 14px;">Blocked by: Check</div>
+            <div style="color: #777; font-size: 14px;">No override available - contact your administrator if this is incorrect</div>
           </div>
-        </body>
-        </html>
-      `;
+        `;
+        
+        document.body.appendChild(overlay);
+        
+        // Register all child elements
+        const allChildren = overlay.querySelectorAll("*");
+        allChildren.forEach(child => registerInjectedElement(child));
 
-        logger.log("Fallback page content replacement completed");
+        logger.log("Fallback page content replacement completed with element tracking");
       } catch (fallbackError) {
         logger.error(
           "Fallback page replacement failed:",
@@ -4367,49 +5298,9 @@ if (window.checkExtensionLoaded) {
                 }: ${threat.description || threat.reason || "Threat detected"}`
             )
             .join("\n");
-        } else if (
-          details.foundThreats &&
-          Array.isArray(details.foundThreats)
-        ) {
-          return details.foundThreats
-            .map(
-              (threat) =>
-                `- ${threat.id || threat}: ${threat.description || "Detected"}`
-            )
-            .join("\n");
-        } else if (details.indicators && Array.isArray(details.indicators)) {
-          return details.indicators
-            .map(
-              (indicator) =>
-                `- ${indicator.id}: ${indicator.description || indicator.id} (${
-                  indicator.severity || "unknown"
-                })`
-            )
-            .join("\n");
-        } else if (
-          details.foundIndicators &&
-          Array.isArray(details.foundIndicators)
-        ) {
-          return details.foundIndicators
-            .map(
-              (indicator) =>
-                `- ${indicator.id || indicator}: ${indicator.description || ""}`
-            )
-            .join("\n");
-        } else {
-          // Fallback: Look for any array properties that might contain indicators
-          const arrayProps = Object.keys(details).filter(
-            (key) => Array.isArray(details[key]) && details[key].length > 0
-          );
-
-          if (arrayProps.length > 0) {
-            return `Multiple indicators detected (${
-              details.reason || "see browser console for details"
-            })`;
-          } else {
-            return `${details.reason || "Unknown detection criteria"}`;
-          }
         }
+        
+        return `${details.reason || "Unknown detection criteria"}`;
       };
 
       const applyBranding = (bannerEl, branding) => {
@@ -4424,17 +5315,23 @@ if (window.checkExtensionLoaded) {
           if (!logoUrl) {
             logoUrl = packagedFallback;
           }
+          
           let brandingSlot = bannerEl.querySelector("#check-banner-branding");
           if (!brandingSlot) {
             const container = document.createElement("div");
             container.id = "check-banner-branding";
             container.style.cssText =
               "display:flex;align-items:center;gap:8px;";
+            
+            // CRITICAL: Register the branding container
+            registerInjectedElement(container);
+            
             const innerWrapper = bannerEl.firstElementChild;
             if (innerWrapper)
               innerWrapper.insertBefore(container, innerWrapper.firstChild);
             brandingSlot = container;
           }
+          
           if (brandingSlot) {
             brandingSlot.innerHTML = "";
             if (logoUrl) {
@@ -4443,15 +5340,27 @@ if (window.checkExtensionLoaded) {
               img.alt = companyName + " logo";
               img.style.cssText =
                 "width:28px;height:28px;object-fit:contain;border-radius:4px;background:rgba(255,255,255,0.25);padding:2px;";
+              
+              // CRITICAL: Register the logo image
+              registerInjectedElement(img);
               brandingSlot.appendChild(img);
             }
+            
             const textWrap = document.createElement("div");
             textWrap.style.cssText =
               "display:flex;flex-direction:column;align-items:flex-start;line-height:1.2;";
+            
+            // CRITICAL: Register the text wrapper
+            registerInjectedElement(textWrap);
+            
             const titleSpan = document.createElement("span");
             titleSpan.style.cssText = "font-size:12px;font-weight:600;";
             titleSpan.textContent = "Protected by " + companyName;
+            
+            // CRITICAL: Register the title span
+            registerInjectedElement(titleSpan);
             textWrap.appendChild(titleSpan);
+            
             if (supportEmail) {
               const contactDiv = document.createElement("div");
               const contactLink = document.createElement("a");
@@ -4471,12 +5380,14 @@ if (window.checkExtensionLoaded) {
                     reason,
                   });
                 } catch (_) {}
+                
                 let indicatorsText;
                 try {
                   indicatorsText = extractPhishingIndicators(analysisData);
                 } catch (err) {
                   indicatorsText = "Parse error - see console";
                 }
+                
                 const detectionScoreLine =
                   analysisData?.score !== undefined
                     ? `Detection Score: ${analysisData.score}/${analysisData.threshold}`
@@ -4493,6 +5404,11 @@ if (window.checkExtensionLoaded) {
                   subject
                 )}&body=${body}`;
               });
+              
+              // CRITICAL: Register contact elements
+              registerInjectedElement(contactDiv);
+              registerInjectedElement(contactLink);
+              
               contactDiv.appendChild(contactLink);
               textWrap.appendChild(contactDiv);
             }
@@ -4539,19 +5455,19 @@ if (window.checkExtensionLoaded) {
 
       // Layout: left branding slot, absolutely centered message block, dismiss button on right.
       const bannerContent = `
-      <div style="position:relative;display:flex;align-items:center;gap:16px;min-height:56px;">
-        <div id="check-banner-left" style="display:flex;align-items:center;gap:12px;z-index:2;"></div>
-        <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;max-width:60%;z-index:1;pointer-events:none;">
-          <span style="display:block;font-size:24px;margin-bottom:4px;">${bannerIcon}</span>
-          <strong style="display:block;">${bannerTitle}</strong>
-          <small style="opacity:0.95;display:block;margin-top:2px;">${reason}${detailsText}</small>
-        </div>
-        <button onclick="this.closest('#ms365-warning-banner').remove(); document.body.style.marginTop = '0'; window.showingBanner = false;" title="Dismiss" style="
-          margin-left:auto;position:relative;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);
-          color:#fff;padding:0;border-radius:4px;cursor:pointer;
-          width:24px;height:24px;min-width:24px;min-height:24px;display:flex;align-items:center;justify-content:center;
-          font-size:14px;font-weight:bold;line-height:1;box-sizing:border-box;font-family:monospace;z-index:2;">×</button>
-      </div>`;
+        <div style="position:relative;display:flex;align-items:center;gap:16px;min-height:56px;">
+          <div id="check-banner-left" style="display:flex;align-items:center;gap:12px;z-index:2;"></div>
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;max-width:60%;z-index:1;pointer-events:none;">
+            <span style="display:block;font-size:24px;margin-bottom:4px;">${bannerIcon}</span>
+            <strong style="display:block;">${bannerTitle}</strong>
+            <small style="opacity:0.95;display:block;margin-top:2px;">${reason}${detailsText}</small>
+          </div>
+          <button onclick="this.closest('#ms365-warning-banner').remove(); document.body.style.marginTop = '0'; window.showingBanner = false;" title="Dismiss" style="
+            margin-left:auto;position:relative;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);
+            color:#fff;padding:0;border-radius:4px;cursor:pointer;
+            width:24px;height:24px;min-width:24px;min-height:24px;display:flex;align-items:center;justify-content:center;
+            font-size:14px;font-weight:bold;line-height:1;box-sizing:border-box;font-family:monospace;z-index:2;">×</button>
+        </div>`;
 
       // Check if banner already exists
       let banner = document.getElementById("ms365-warning-banner");
@@ -4574,29 +5490,35 @@ if (window.checkExtensionLoaded) {
       banner = document.createElement("div");
       banner.id = "ms365-warning-banner";
       banner.style.cssText = `
-      position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
-      width: 100% !important;
-      background: ${bannerColor} !important;
-      color: white !important;
-      padding: 16px !important;
-      z-index: 2147483646 !important;
-      font-family: system-ui, -apple-system, sans-serif !important;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
-      text-align: center !important;
-    `;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        background: ${bannerColor} !important;
+        color: white !important;
+        padding: 16px !important;
+        z-index: 2147483646 !important;
+        font-family: system-ui, -apple-system, sans-serif !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+        text-align: center !important;
+      `;
+
+      // CRITICAL: Register the banner BEFORE adding to DOM
+      registerInjectedElement(banner);
 
       banner.innerHTML = bannerContent;
-      document.body.appendChild(banner);
+      document.body.insertBefore(banner, document.body.firstChild);
+
+      // Register all child elements created via innerHTML
+      const allChildren = banner.querySelectorAll("*");
+      allChildren.forEach(child => registerInjectedElement(child));
 
       fetchBranding().then((branding) => applyBranding(banner, branding));
 
-      // Push page content down to avoid covering login header
-      const bannerHeight = banner.offsetHeight || 64; // fallback height
+      const bannerHeight = banner.offsetHeight || 64;
       document.body.style.marginTop = `${bannerHeight}px`;
 
-      logger.log("Warning banner displayed");
+      logger.log("Warning banner displayed and all elements registered for exclusion");
     } catch (error) {
       logger.error("Failed to show warning banner:", error.message);
       showingBanner = false;
@@ -4606,7 +5528,9 @@ if (window.checkExtensionLoaded) {
   /**
    * Show valid badge for trusted domains
    */
-  function showValidBadge() {
+  let validBadgeTimeoutId = null; // Store timeout ID for cleanup
+  
+  async function showValidBadge() {
     try {
       // Check if badge already exists - for valid badge, we don't need to update content
       // since it's always the same, but we ensure it's still visible
@@ -4614,6 +5538,27 @@ if (window.checkExtensionLoaded) {
         logger.log("Valid badge already displayed");
         return;
       }
+
+      // Clear any existing timeout from previous badge
+      if (validBadgeTimeoutId) {
+        clearTimeout(validBadgeTimeoutId);
+        validBadgeTimeoutId = null;
+      }
+
+      // Load timeout configuration
+      const config = await new Promise((resolve) => {
+        chrome.storage.local.get(["config"], (result) => {
+          resolve(result.config || {});
+        });
+      });
+
+      // Get timeout value (default to 5 seconds if not configured)
+      // A value of 0 means no timeout (badge stays until manually dismissed)
+      const timeoutSeconds = config.validPageBadgeTimeout !== undefined 
+        ? config.validPageBadgeTimeout 
+        : 5;
+
+      logger.debug(`Valid badge timeout configured: ${timeoutSeconds} seconds (0 = no timeout)`);
 
       // Check if mobile using media query (more conservative breakpoint)
       const isMobile = window.matchMedia("(max-width: 480px)").matches;
@@ -4651,7 +5596,7 @@ if (window.checkExtensionLoaded) {
             <strong>Verified Microsoft Domain</strong><br>
             <small>This is an authentic Microsoft login page</small>
           </div>
-          <button onclick="this.parentElement.parentElement.remove(); document.body.style.marginTop = '0';" title="Dismiss" style="
+          <button onclick="if(window.validBadgeTimeoutId){clearTimeout(window.validBadgeTimeoutId);window.validBadgeTimeoutId=null;} this.parentElement.parentElement.remove(); document.body.style.marginTop = '0';" title="Dismiss" style="
             position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
             background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);
             color: white; padding: 0; border-radius: 4px; cursor: pointer;
@@ -4695,6 +5640,29 @@ if (window.checkExtensionLoaded) {
       }
 
       logger.log("Valid badge displayed");
+
+      // Auto-dismiss after timeout if configured (0 = no timeout)
+      if (timeoutSeconds > 0) {
+        logger.log(`Valid badge will auto-dismiss in ${timeoutSeconds} seconds`);
+        // Capture isMobile state for the timeout callback to avoid race conditions
+        const wasMobileBanner = isMobile;
+        validBadgeTimeoutId = setTimeout(() => {
+          const existingBadge = document.getElementById("ms365-valid-badge");
+          if (existingBadge) {
+            existingBadge.remove();
+            // Reset margin if it was a mobile banner
+            if (wasMobileBanner) {
+              document.body.style.marginTop = '0';
+            }
+            logger.log(`Valid badge auto-dismissed after ${timeoutSeconds}s timeout`);
+          }
+          validBadgeTimeoutId = null; // Clear the reference
+        }, timeoutSeconds * 1000);
+        // Make timeout ID accessible to inline onclick handler
+        window.validBadgeTimeoutId = validBadgeTimeoutId;
+      } else {
+        logger.log("Valid badge will stay visible until manually dismissed (timeout = 0)");
+      }
     } catch (error) {
       logger.error("Failed to show valid badge:", error.message);
     }
@@ -5259,6 +6227,13 @@ if (window.checkExtensionLoaded) {
   window.addEventListener("beforeunload", () => {
     try {
       stopDOMMonitoring();
+      
+      // Clear any scheduled re-scans
+      if (scheduledRescanTimeout) {
+        clearTimeout(scheduledRescanTimeout);
+        scheduledRescanTimeout = null;
+      }
+      
       protectionActive = false;
     } catch (error) {
       logger.error("Cleanup failed:", error.message);

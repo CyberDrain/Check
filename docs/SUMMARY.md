@@ -1,6 +1,7 @@
 # Table of contents
 
 - [About](README.md)
+- [Firefox Support](firefox-support.md)
 
 ## Deployment
 
@@ -10,6 +11,7 @@
     - [Domain Deployment](deployment/chrome-edge-deployment-instructions/windows/domain-deployment.md)
     - [RMM Deployment](deployment/chrome-edge-deployment-instructions/windows/rmm-deployment.md)
   - [MacOS](deployment/chrome-edge-deployment-instructions/macos.md)
+- [Firefox Deployment](deployment/firefox-deployment.md)
 
 ## Settings
 

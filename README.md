@@ -5,6 +5,8 @@ impersonate Microsoft 365 sign-in pages.
 
 Install it from the [Chrome](https://chromewebstore.google.com/detail/benimdeioplgkhanklclahllklceahbe) Store here or the [Edge](https://microsoftedge.microsoft.com/addons/detail/check-by-cyberdrain/knepjpocdagponkonnbggpcnhnaikajg) store here.
 
+**Firefox Support**: The extension also works on Firefox 109+. See [Firefox Support](docs/firefox-support.md) for installation instructions.
+
 ## Features 
 
 - **Detection engine** – loads rules from `rules/detection-rules.json` and
@@ -21,7 +23,7 @@ Install it from the [Chrome](https://chromewebstore.google.com/detail/benimdeiop
 
 ## Requirements
 
-- Chrome 88+ or other Chromium-based browsers supporting Manifest V3
+- Chrome 88+, Edge 88+, or Firefox 109+ (browsers supporting Manifest V3)
 - Optional enterprise management via Group Policy or Microsoft Intune for
   policy enforcement
 
@@ -29,10 +31,18 @@ Install it from the [Chrome](https://chromewebstore.google.com/detail/benimdeiop
 
 ### Manual
 
+#### Chrome/Edge
 1. Clone this repository.
-2. In Chrome/Edge open `chrome://extensions/` and enable **Developer mode**.
+2. In Chrome/Edge open `chrome://extensions/` or `edge://extensions` and enable **Developer mode**.
 3. Click **Load unpacked** and select the project directory.
 4. Verify the extension using `test-extension-loading.html`.
+
+#### Firefox
+1. Clone this repository.
+2. Run `npm run build:firefox` to configure for Firefox.
+3. Open `about:debugging#/runtime/this-firefox` in Firefox.
+4. Click **Load Temporary Add-on** and select `manifest.json`.
+5. For more details, see [Firefox Support](docs/firefox-support.md).
 
 ### Enterprise
 

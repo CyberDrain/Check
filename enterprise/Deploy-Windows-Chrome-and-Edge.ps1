@@ -24,6 +24,11 @@ $updateInterval = 24 # This will set the "Update Interval" option in the Detecti
 $urlAllowlist = @() # This will set the "URL Allowlist" option in the Detection Configuration settings; default is blank; if you want to add multiple URLs, add them as a comma-separated list within the brackets (e.g., @("https://example1.com", "https://example2.com")). Supports simple URLs with * wildcard (e.g., https://*.example.com) or advanced regex patterns (e.g., ^https:\/\/(www\.)?example\.com\/.*$).
 $enableDebugLogging = 0 # 0 = Unchecked, 1 = Checked (Enabled); default is 0; This will set the "Enable Debug Logging" option in the Activity Log settings.
 
+# Generic Webhook Settings
+$enableGenericWebhook = 0 # 0 = Disabled, 1 = Enabled; default is 0; This will enable the generic webhook for sending detection events to a custom endpoint.
+$webhookUrl = "" # This will set the "Webhook URL" option; default is blank; if you set $enableGenericWebhook to 1, you must set this to a valid URL including the protocol (e.g., https://webhook.example.com/endpoint).
+$webhookEvents = @() # This will set the "Event Types" to send to the webhook; default is blank; if you set $enableGenericWebhook to 1, you can specify which events to send. Available events: "detection_alert", "false_positive_report", "page_blocked", "rogue_app_detected", "threat_detected", "validation_event". Example: @("detection_alert", "page_blocked", "threat_detected").
+
 # Custom Branding Settings
 $companyName = "CyberDrain" # This will set the "Company Name" option in the Custom Branding settings; default is "CyberDrain".
 $companyURL = "https://cyberdrain.com" # This will set the Company URL option in the Custom Branding settings; default is "https://cyberdrain.com"; Must include the protocol (e.g., https://).
@@ -90,6 +95,32 @@ function Configure-ExtensionSettings {
     New-ItemProperty -Path $customBrandingKey -Name "supportEmail" -PropertyType String -Value $supportEmail -Force | Out-Null
     New-ItemProperty -Path $customBrandingKey -Name "primaryColor" -PropertyType String -Value $primaryColor -Force | Out-Null
     New-ItemProperty -Path $customBrandingKey -Name "logoUrl" -PropertyType String -Value $logoUrl -Force | Out-Null
+
+    # Create and configure generic webhook
+    $genericWebhookKey = "$ManagedStorageKey\genericWebhook"
+    if (!(Test-Path $genericWebhookKey)) {
+        New-Item -Path $genericWebhookKey -Force | Out-Null
+    }
+
+    # Set generic webhook settings
+    New-ItemProperty -Path $genericWebhookKey -Name "enabled" -PropertyType DWord -Value $enableGenericWebhook -Force | Out-Null
+    New-ItemProperty -Path $genericWebhookKey -Name "url" -PropertyType String -Value $webhookUrl -Force | Out-Null
+
+    # Create and configure webhook events list
+    $webhookEventsKey = "$genericWebhookKey\events"
+    if (!(Test-Path $webhookEventsKey)) {
+        New-Item -Path $webhookEventsKey -Force | Out-Null
+    }
+
+    # Clear any existing properties
+    Remove-ItemProperty -Path $webhookEventsKey -Name * -Force | Out-Null
+
+    # Set webhook events with names starting from 1
+    for ($i = 0; $i -lt $webhookEvents.Count; $i++) {
+        $propertyName = ($i + 1).ToString()
+        $propertyValue = $webhookEvents[$i]
+        New-ItemProperty -Path $webhookEventsKey -Name $propertyName -PropertyType String -Value $propertyValue -Force | Out-Null
+    }
 
     # Create and configure extension settings
     if (!(Test-Path $ExtensionSettingsKey)) {

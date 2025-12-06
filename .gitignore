@@ -177,6 +177,7 @@ config/local-config.json
 config/development.json
 config/production.json
 config/test.json
+manifest.chrome.json
 
 # Sensitive configuration files
 config/secrets.json

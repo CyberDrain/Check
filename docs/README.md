@@ -20,9 +20,11 @@ layout:
 
 ## What is Check?
 
-**Check** is an browser extension that provides real-time protection against Microsoft 365 phishing attacks.&#x20;
+**Check** is a browser extension that provides real-time protection against Microsoft 365 phishing attacks.&#x20;
 
 Specifically designed for enterprises and managed service providers, Check uses sophisticated detection algorithms to identify and block malicious login pages before credentials can be stolen by bad actors.
+
+Check is available for **Chrome**, **Microsoft Edge**, and **Firefox** (109+).
 
 The extension integrates seamlessly with existing security workflows, offering centralized management, comprehensive logging, and offers an optional CIPP integration for MSPs managing multiple Microsoft 365 tenants.&#x20;
 
@@ -31,6 +33,8 @@ Check is completely free, open source, and can be delivered to users completely 
 Installing the plugin immediately gives you protection against AITM attacks, and takes seconds. Click the install button and you're good to go.
 
 <a href="https://microsoftedge.microsoft.com/addons/detail/check-by-cyberdrain/knepjpocdagponkonnbggpcnhnaikajg" class="button primary">Install for Edge</a> **OR**  <a href="https://chromewebstore.google.com/detail/benimdeioplgkhanklclahllklceahbe" class="button primary">Install for Chrome</a>
+
+**Firefox users:** See the [Firefox Support](firefox-support.md) guide for installation instructions.
 
 ## Why was Check created?
 

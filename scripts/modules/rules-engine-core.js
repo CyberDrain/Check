@@ -135,7 +135,19 @@ function finalize(result, started) {
   return result;
 }
 
-function processPhishingIndicators(indicators, pageSource, pageText, url) {
+function processPhishingIndicators(indicators, pageSource, pageText, url, options = {}) {
+  // Patch: If scanCleaned is true, use cleaned source for all matching
+  let actualSource = pageSource;
+  let actualText = pageText;
+  if (options.scanCleaned && typeof getCleanPageSource === "function") {
+    actualSource = getCleanPageSource();
+    if (typeof getCleanPageText === "function") {
+      actualText = getCleanPageText();
+    }
+    if (typeof logger !== "undefined" && logger.log) {
+      logger.log(`[rules-engine-core] scanCleaned enabled: using cleaned page source (${actualSource.length} chars)`);
+    }
+  }
   const threats = [];
   let totalScore = 0;
 
@@ -186,28 +198,131 @@ function processPhishingIndicators(indicators, pageSource, pageText, url) {
         }
       };
 
-      // Attempt match against full pageSource
-      if (pattern.test(pageSource)) {
-        matches = true;
-        matchedFrom = "source";
-        snippet = buildSnippet(pageSource, pattern);
-      } else if (pattern.test(pageText)) {
-        matches = true;
-        matchedFrom = "text";
-        snippet = buildSnippet(pageText, pattern);
-      } else if (pattern.test(url)) {
-        matches = true;
-        matchedFrom = "url";
-        snippet = url;
-      }
+      // Code-driven logic if flagged in rules file
+      if (ind.code_driven === true && ind.code_logic) {
+        // Supported code-driven logic types
+        if (ind.code_logic.type === "substring") {
+          matches = (ind.code_logic.substrings || []).every(sub => actualSource.includes(sub));
+          if (matches) {
+            matchedFrom = "source (substring)";
+            snippet = ind.code_logic.substrings.join(", ");
+          }
+        } else if (ind.code_logic.type === "substring_not") {
+          matches = (ind.code_logic.substrings || []).every(sub => actualSource.includes(sub)) &&
+                    (ind.code_logic.not_substrings || []).every(sub => !actualSource.includes(sub));
+          if (matches) {
+            matchedFrom = "source (substring + not)";
+            snippet = ind.code_logic.substrings.join(", ");
+          }
+        } else if (ind.code_logic.type === "allowlist") {
+          const lowerSource = actualSource.toLowerCase();
+          const isAllowlisted = (ind.code_logic.allowlist || []).some(phrase => lowerSource.includes(phrase));
+          if (!isAllowlisted && ind.code_logic.optimized_pattern) {
+            const optPattern = new RegExp(ind.code_logic.optimized_pattern, ind.flags || "i");
+            if (optPattern.test(actualSource)) {
+              matches = true;
+              matchedFrom = "source (optimized regex)";
+              snippet = buildSnippet(actualSource, optPattern);
+            }
+          }
+        } else if (ind.code_logic.type === "substring_not_allowlist") {
+          const substring = ind.code_logic.substring;
+          const allowlist = ind.code_logic.allowlist || [];
+          
+          if (substring && actualSource.includes(substring)) {
+            const lowerSource = actualSource.toLowerCase();
+            const isAllowed = allowlist.some(allowed => 
+              lowerSource.includes(allowed.toLowerCase())
+            );
+            
+            if (!isAllowed) {
+              matches = true;
+              matchedFrom = "source (substring not in allowlist)";
+              snippet = substring;
+            }
+          }
+        } else if (ind.code_logic.type === "substring_or_regex") {
+          const substrings = ind.code_logic.substrings || [];
+          const lowerSource = actualSource.toLowerCase();
+          
+          // Fast path: check if any substring is present
+          for (const sub of substrings) {
+            if (lowerSource.includes(sub.toLowerCase())) {
+              matches = true;
+              matchedFrom = "source (substring)";
+              snippet = sub;
+              break;
+            }
+          }
+          
+          // Fallback: use regex if no substring matched
+          if (!matches && ind.code_logic.regex) {
+            const pattern = new RegExp(ind.code_logic.regex, ind.code_logic.flags || "i");
+            if (pattern.test(actualSource)) {
+              matches = true;
+              matchedFrom = "source (regex)";
+              snippet = buildSnippet(actualSource, pattern);
+            }
+          }
+        } else if (ind.code_logic.type === "substring_with_exclusions") {
+          const lowerSource = actualSource.toLowerCase();
+          
+          // First check exclusions
+          const excludeList = ind.code_logic.exclude_if_contains || [];
+          const hasExclusion = excludeList.some(excl => 
+            lowerSource.includes(excl.toLowerCase())
+          );
+          
+          if (!hasExclusion) {
+            if (ind.code_logic.match_any) {
+              // Simple match - check if any phrase is present
+              for (const phrase of ind.code_logic.match_any) {
+                if (lowerSource.includes(phrase.toLowerCase())) {
+                  matches = true;
+                  matchedFrom = "source (substring with exclusions)";
+                  snippet = phrase;
+                  break;
+                }
+              }
+            } else if (ind.code_logic.match_pattern_parts) {
+              // Complex match - all pattern parts must be present
+              const parts = ind.code_logic.match_pattern_parts;
+              matches = parts.every(partGroup => 
+                partGroup.some(part => lowerSource.includes(part.toLowerCase()))
+              );
+              if (matches) {
+                matchedFrom = "source (pattern parts with exclusions)";
+                snippet = parts.map(p => p.join('|')).join(' + ');
+              }
+            }
+          }
+        }
+      } else {
+        // Default regex-driven logic
+        // Attempt match against full pageSource
+        // Patch: Use actualSource/actualText for matching
+        if (pattern.test(actualSource)) {
+          matches = true;
+          matchedFrom = "source";
+          snippet = buildSnippet(actualSource, pattern);
+        } else if (pattern.test(actualText)) {
+          matches = true;
+          matchedFrom = "text";
+          snippet = buildSnippet(actualText, pattern);
+        } else if (pattern.test(url)) {
+          matches = true;
+          matchedFrom = "url";
+          snippet = url;
+        }
 
-      // additional_checks
-      if (!matches && ind.additional_checks) {
-        for (const check of ind.additional_checks) {
-          if (pageSource.includes(check) || pageText.includes(check)) {
-            matches = true;
-            matchDetails = "additional check";
-            break;
+        // additional_checks
+        if (!matches && ind.additional_checks) {
+          for (const check of ind.additional_checks) {
+            if (pageSource.includes(check) || pageText.includes(check)) {
+              matches = true;
+              matchDetails = "additional check";
+              break;
+            }
           }
         }
       }
@@ -246,7 +361,7 @@ function processPhishingIndicators(indicators, pageSource, pageText, url) {
         category: ind.category || "general",
         confidence: ind.confidence ?? 0.5,
         description: ind.description || "",
-        matchDetails: snippet || matchedFrom || "",
+        matchDetails: snippet || matchedFrom || matchDetails || "",
       };
       threats.push(threat);
 

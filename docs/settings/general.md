@@ -171,6 +171,16 @@ When Check blocks a dangerous website or finds something suspicious, it can show
 
 This adds a small green checkmark to real Microsoft login pages. This feature is optional.
 
+### **Valid Page Badge Timeout**
+
+This setting controls how long the "Verified Microsoft Domain" badge stays visible on legitimate Microsoft login pages before automatically dismissing.
+
+- **Set to 0**: Badge stays visible until you manually dismiss it (no timeout)
+- **Set to 1-300 seconds**: Badge automatically disappears after the specified number of seconds
+- **Default**: 5 seconds
+
+This allows you to customize the badge experience based on your preferences. If you want to see the badge every time you visit a Microsoft login page, set it to 0. If you prefer it to disappear quickly, use a smaller number like 3-5 seconds.
+
 {% hint style="warning" %}
 #### What if Settings Are Not Visible?
 

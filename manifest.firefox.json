@@ -10,17 +10,16 @@
     "scripting",
     "webRequest",
     "alarms",
-    "identity",
-    "identity.email"
+    "identity"
   ],
   "host_permissions": ["<all_urls>"],
   "background": {
-    "service_worker": "scripts/background.js",
+    "scripts": ["scripts/background.js"],
     "type": "module"
   },
   "content_scripts": [
     {
-      "matches": ["http://*/*", "https://*/*", "file:///*/*"],
+      "matches": ["http://*/*", "https://*/*"],
       "js": ["scripts/browser-polyfill-inline.js", "scripts/content.js"],
       "css": ["styles/content.css"],
       "run_at": "document_idle",
@@ -37,7 +36,10 @@
       "128": "images/icon128.png"
     }
   },
-  "options_page": "options/options.html",
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
   "icons": {
     "16": "images/icon16.png",
     "32": "images/icon32.png",
@@ -62,7 +64,10 @@
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;"
   },
-  "storage": {
-    "managed_schema": "config/managed_schema.json"
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "check@cyberdrain.com",
+      "strict_min_version": "109.0"
+    }
   }
 }

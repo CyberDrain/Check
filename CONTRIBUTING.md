@@ -1,12 +1,31 @@
 # Contributing to Check
 
-Thanks for taking the time to contribute! These guidelines help keep contributions consistent and reliable for this Chrome extension.
+Thanks for taking the time to contribute! These guidelines help keep contributions consistent and reliable for this cross-browser extension.
 
 ## Development Setup
+
+### Chrome/Edge
 - Fork the repository and clone your fork.
-- In Chrome or a Chromium-based browser, open `chrome://extensions`.
+- Run `npm run build:chrome` to configure for Chrome/Edge.
+- In Chrome or Edge, open `chrome://extensions` or `edge://extensions`.
 - Enable **Developer mode** and choose **Load unpacked**.
 - Select the repository root to load the extension. Reload the extension after making changes.
+
+### Firefox
+- Fork the repository and clone your fork.
+- Run `npm run build:firefox` to configure for Firefox.
+- In Firefox, open `about:debugging#/runtime/this-firefox`.
+- Click **Load Temporary Add-on** and select `manifest.json`.
+- Reload the extension after making changes.
+- See [Firefox Support Guide](docs/firefox-support.md) for more details.
+
+## Cross-Browser Compatibility
+- The extension supports Chrome, Edge, and Firefox through browser polyfills.
+- Always test changes in both Chrome and Firefox before submitting.
+- Use the browser polyfill APIs in your code:
+  - In ES modules: `import { chrome, storage } from "./browser-polyfill.js"`
+  - In traditional scripts: The polyfill is auto-loaded, just use `chrome.*` as normal
+- Avoid browser-specific features unless absolutely necessary.
 
 ## Coding Standards (ESLint)
 - No ESLint configuration is committed to the repository. Maintain the existing code style (2 spaces, semicolons, ES modules).
@@ -18,10 +37,12 @@ Thanks for taking the time to contribute! These guidelines help keep contributio
 
 ## Testing Expectations
 - Automated tests are not currently available. Manually test changes by loading the extension and verifying:
-  - The background service worker initializes without errors.
+  - The background service worker/script initializes without errors.
   - Content scripts inject and execute as expected.
   - Options and popup pages function correctly.
-- Include a brief summary of manual testing in your pull request.
+- **Test in both Chrome and Firefox** to ensure cross-browser compatibility.
+- See [Firefox Support Guide](docs/firefox-support.md) for Firefox testing instructions.
+- Include a brief summary of manual testing in your pull request, noting which browsers were tested.
 
 ## Scripted Deployment Updates
 - Any new configuration settings result in a need to be managed by scripted deployment. As such, the following files need to be reviewed and have the settings added:

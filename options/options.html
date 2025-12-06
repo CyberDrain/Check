@@ -93,6 +93,15 @@
 
                         <div class="setting-item">
                             <label class="setting-label">
+                                <input type="checkbox" id="forceMainThreadPhishingProcessing" class="setting-checkbox">
+                                <span class="checkbox-custom"></span>
+                                Force Main Thread Phishing Processing
+                            </label>
+                            <p class="setting-description">For debugging: disables background worker and forces phishing detection to run on the main thread (timing and logs will be more accurate, but performance may be reduced).</p>
+                        </div>
+
+                        <div class="setting-item">
+                            <label class="setting-label">
                                 <input type="checkbox" id="enableCippReporting" class="setting-checkbox">
                                 <span class="checkbox-custom"></span>
                                 Enable CIPP Reporting
@@ -195,6 +204,14 @@
                             </label>
                             <p class="setting-description">Display a verification badge on legitimate Microsoft 365 login pages</p>
                         </div>
+
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                Valid Page Badge Timeout (seconds)
+                                <input type="number" id="validPageBadgeTimeout" class="setting-input" min="0" max="300" step="1" value="5" required>
+                            </label>
+                            <p class="setting-description">Auto-dismiss timeout for the valid page badge in seconds. Set to 0 for no timeout (badge stays visible until manually dismissed).</p>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -250,6 +267,12 @@
                         </div>
                         <div id="configDisplay" class="config-display">
                             <div class="config-loading">Loading configuration...</div>
+                            <div id="configSummary" class="config-summary" style="display:none;">
+                                <h4>Phishing Indicators with Code-Driven Logic</h4>
+                                <div id="codeDrivenIndicators"></div>
+                                <h4>Other Key Settings</h4>
+                                <ul id="configKeySettings"></ul>
+                            </div>
                         </div>
                         <p class="setting-description">Read-only view of the current detection rules and configuration</p>
                     </div>
@@ -541,6 +564,37 @@
         </div>
     </div>
 
+    <script src="../scripts/browser-polyfill-inline.js"></script>
     <script src="options.js"></script>
+    <script>
+    // Minimal config summary: just show code-driven indicator count and key settings
+    function renderConfigSummary(config) {
+        const codeDrivenDiv = document.getElementById('codeDrivenIndicators');
+        const keySettingsUl = document.getElementById('configKeySettings');
+        if (!config || !config.phishing_indicators) return;
+        // Show only code-driven indicator count
+        const codeDrivenCount = config.phishing_indicators.filter(r => r.code_driven).length;
+        codeDrivenDiv.innerHTML = `<div class="config-item"><strong>Code-Driven Indicators:</strong> <span class="config-value">${codeDrivenCount}</span></div>`;
+        // Show some key settings
+        keySettingsUl.innerHTML = '';
+        if (config.version) keySettingsUl.innerHTML += `<li><strong>Rules Version:</strong> ${config.version}</li>`;
+        if (config.lastUpdated) keySettingsUl.innerHTML += `<li><strong>Last Updated:</strong> ${config.lastUpdated}</li>`;
+        if (config.detection_settings && config.detection_settings.block_threshold !== undefined) {
+            keySettingsUl.innerHTML += `<li><strong>Block Threshold:</strong> ${config.detection_settings.block_threshold}</li>`;
+        }
+        if (config.detection_settings && config.detection_settings.warn_threshold !== undefined) {
+            keySettingsUl.innerHTML += `<li><strong>Warn Threshold:</strong> ${config.detection_settings.warn_threshold}</li>`;
+        }
+    }
+    // Patch into config loading logic
+    (function() {
+        const origShowConfig = window.showConfigDisplay;
+        window.showConfigDisplay = function(config) {
+            if (typeof origShowConfig === 'function') origShowConfig(config);
+            renderConfigSummary(config);
+            document.getElementById('configSummary').style.display = '';
+        };
+    })();
+    </script>
 </body>
 </html>
