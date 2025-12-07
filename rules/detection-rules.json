@@ -495,6 +495,22 @@
         "pattern_source": "microsoft_domain_patterns"
       },
       "description": "Validate referrer against Microsoft domain patterns for legitimate authentication flows"
+    },
+    {
+      "id": "detect_form_action_modification",
+      "type": "code_driven",
+      "code_driven": true,
+      "code_logic": {
+        "type": "pattern_count",
+        "patterns": [
+          "addEventListener\\s*\\(\\s*['\"]submit['\"]",
+          "\\.action\\s*=\\s*['\"]https?://(?!login\\.microsoftonline)[^'\"]+['\"]"
+        ],
+        "flags": "i",
+        "min_count": 2
+      },
+      "weight": -30,
+      "description": "JavaScript code modifying form action on submit"
     }
   ],
   "thresholds": {
@@ -525,6 +541,26 @@
       "action": "warn",
       "category": "url_structure",
       "confidence": 0.7
+    },
+    {
+      "id": "phi_033_suspicious_event_listeners",
+      "code_driven": true,
+      "code_logic": {
+        "type": "pattern_count",
+        "patterns": [
+          "addEventListener\\s*\\(\\s*['\"]submit['\"]",
+          "\\.action\\s*=\\s*['\"](?!https://login\\.microsoftonline)",
+          "form\\.setAttribute\\s*\\(['\"]action['\"]"
+        ],
+        "flags": "i",
+        "min_count": 2
+      },
+      "severity": "high",
+      "description": "Form with submit listeners that modify action attribute",
+      "action": "block",
+      "category": "dom_manipulation",
+      "confidence": 0.90,
+      "weight": 20
     },
     {
       "id": "phi_004",

@@ -3340,6 +3340,64 @@ if (window.checkExtensionLoaded) {
               }
               break;
 
+            case "code_driven":
+              // Support code-driven rules using same logic as phishing indicators
+              if (rule.code_driven === true && rule.code_logic) {
+                try {
+                  // Use DetectionPrimitives if available
+                  if (DetectionPrimitives[rule.code_logic.type]) {
+                    try {
+                      ruleTriggered = evaluatePrimitive(
+                        pageHTML,
+                        rule.code_logic,
+                        { cache: new Map() }
+                      );
+                    } catch (primitiveError) {
+                      logger.warn(
+                        `Primitive evaluation failed for rule ${rule.id}:`,
+                        primitiveError.message
+                      );
+                    }
+                  }
+                  // Legacy code-driven types
+                  else if (rule.code_logic.type === "substring") {
+                    ruleTriggered = (rule.code_logic.substrings || []).every(
+                      (sub) => pageHTML.includes(sub)
+                    );
+                  } else if (rule.code_logic.type === "substring_not") {
+                    ruleTriggered =
+                      (rule.code_logic.substrings || []).every((sub) =>
+                        pageHTML.includes(sub)
+                      ) &&
+                      (rule.code_logic.not_substrings || []).every(
+                        (sub) => !pageHTML.includes(sub)
+                      );
+                  } else if (rule.code_logic.type === "pattern_count") {
+                    let matchCount = 0;
+                    for (const pattern of rule.code_logic.patterns || []) {
+                      try {
+                        const regex = new RegExp(
+                          pattern,
+                          rule.code_logic.flags || "i"
+                        );
+                        if (regex.test(pageHTML)) {
+                          matchCount++;
+                        }
+                      } catch (e) {
+                        // Skip invalid patterns
+                      }
+                    }
+                    ruleTriggered = matchCount >= (rule.code_logic.min_count || 1);
+                  }
+                } catch (codeDrivenError) {
+                  logger.warn(
+                    `Code-driven rule ${rule.id} failed:`,
+                    codeDrivenError.message
+                  );
+                }
+              }
+              break;
+
             default:
               logger.warn(`Unknown rule type: ${rule.type}`);
           }
