@@ -3448,21 +3448,26 @@ if (window.checkExtensionLoaded) {
   /**
    * Main protection logic following CORRECTED specification
    */
-  async function runProtection(isRerun = false) {
-    // Early exit if page has been escalated to block
-    if (escalatedToBlock) {
+  async function runProtection(isRerun = false, forceRescan = false, options = {}) {
+    // Early exit if page has been escalated to block (unless forced)
+    if (escalatedToBlock && !forceRescan) {
       logger.log(
         `🛑 runProtection() called but page already escalated to block - ignoring`
       );
       return;
     }
 
-    // Early exit if a banner is already displayed and this is a re-run
-    if (isRerun && showingBanner) {
+    // Early exit if a banner is already displayed and this is a re-run (unless forced)
+    if (isRerun && showingBanner && !forceRescan) {
       logger.log(
         `🛑 runProtection() called but banner already displayed - ignoring re-scan`
       );
       return;
+    }
+
+    // Log forced re-scan
+    if (forceRescan) {
+      logger.log('🔄 FORCED RE-SCAN: User manually triggered re-scan from popup');
     }
 
     try {
@@ -3472,7 +3477,7 @@ if (window.checkExtensionLoaded) {
         } for ${window.location.href}`
       );
       let cleanedSourceLength = null;
-      if (typeof arguments[1] === "object" && arguments[1]?.scanCleaned) {
+      if (options.scanCleaned) {
         // If scanCleaned is true, get cleaned page source length
         const cleanedSource = getCleanPageSource();
         cleanedSourceLength = cleanedSource ? cleanedSource.length : null;
@@ -3565,8 +3570,8 @@ if (window.checkExtensionLoaded) {
         return;
       }
 
-      // Rate limiting for DOM change re-runs
-      if (isRerun) {
+      // Rate limiting for DOM change re-runs (bypass if forced)
+      if (isRerun && !forceRescan) {
         const now = Date.now();
         const isThreatTriggeredRescan =
           threatTriggeredRescanCount > 0 &&
@@ -3590,6 +3595,11 @@ if (window.checkExtensionLoaded) {
 
         lastScanTime = now;
         scanCount++;
+      } else if (forceRescan) {
+        // For forced re-scans, reset timing and increment scan count
+        lastScanTime = Date.now();
+        scanCount++;
+        logger.log(`🔄 Forced re-scan initiated (scan count: ${scanCount})`);
       } else {
         protectionActive = true;
         scanCount = 1;
@@ -3980,7 +3990,7 @@ if (window.checkExtensionLoaded) {
               reason: reason,
               score: 0, // Critical threats get lowest score
               threshold: 85,
-              phishingIndicators: criticalThreats.map((t) => t.id),
+              phishingIndicators: phishingResult.threats.map((t) => t.id),
             };
 
             if (protectionEnabled) {
@@ -4022,7 +4032,7 @@ if (window.checkExtensionLoaded) {
               clientId: clientInfo.clientId,
               clientSuspicious: clientInfo.isMalicious,
               clientReason: clientInfo.reason,
-              phishingIndicators: criticalThreats.map((t) => t.id),
+              phishingIndicators: phishingResult.threats.map((t) => t.id),
             });
 
             sendCippReport({
@@ -4032,7 +4042,7 @@ if (window.checkExtensionLoaded) {
               severity: "critical",
               legitimate: false,
               timestamp: new Date().toISOString(),
-              phishingIndicators: criticalThreats.map((t) => t.id),
+              phishingIndicators: phishingResult.threats.map((t) => t.id),
               matchedRules: criticalThreats.map((threat) => ({
                 id: threat.id,
                 description: threat.description,
@@ -4079,7 +4089,7 @@ if (window.checkExtensionLoaded) {
               reason: reason,
               score: shouldEscalateToBlock ? 0 : 50, // Critical score if escalated
               threshold: 85,
-              phishingIndicators: warningThreats.map((t) => t.id),
+              phishingIndicators: phishingResult.threats.map((t) => t.id),
               escalated: shouldEscalateToBlock,
               escalationReason: shouldEscalateToBlock
                 ? `${warningThreats.length} warning threats exceeded threshold of ${WARNING_THRESHOLD}`
@@ -4152,7 +4162,7 @@ if (window.checkExtensionLoaded) {
               clientId: clientInfo.clientId,
               clientSuspicious: clientInfo.isMalicious,
               clientReason: clientInfo.reason,
-              phishingIndicators: warningThreats.map((t) => t.id),
+              phishingIndicators: phishingResult.threats.map((t) => t.id),
               escalated: shouldEscalateToBlock,
               escalationReason: shouldEscalateToBlock
                 ? `${warningThreats.length} warning threats exceeded threshold of ${WARNING_THRESHOLD}`
@@ -4169,7 +4179,7 @@ if (window.checkExtensionLoaded) {
               severity: shouldEscalateToBlock ? "critical" : "medium",
               legitimate: false,
               timestamp: new Date().toISOString(),
-              phishingIndicators: warningThreats.map((t) => t.id),
+              phishingIndicators: phishingResult.threats.map((t) => t.id),
               escalated: shouldEscalateToBlock,
               escalationReason: shouldEscalateToBlock
                 ? `${warningThreats.length} warning threats exceeded threshold of ${WARNING_THRESHOLD}`
@@ -4665,7 +4675,7 @@ if (window.checkExtensionLoaded) {
           reason: reason,
           score: 0, // Critical threats get lowest score
           threshold: detectionResult.threshold,
-          phishingIndicators: criticalThreats.map((t) => t.id),
+          phishingIndicators: phishingResult.threats.map((t) => t.id),
         };
 
         // Schedule threat-triggered re-scan to catch additional late-loading threats
@@ -4739,7 +4749,7 @@ if (window.checkExtensionLoaded) {
           clientId: clientInfo.clientId,
           clientSuspicious: clientInfo.isMalicious,
           clientReason: clientInfo.reason,
-          phishingIndicators: criticalThreats.map((t) => t.id),
+          phishingIndicators: phishingResult.threats.map((t) => t.id),
         });
 
         sendCippReport({
@@ -4749,7 +4759,7 @@ if (window.checkExtensionLoaded) {
           severity: "critical",
           legitimate: false,
           timestamp: new Date().toISOString(),
-          phishingIndicators: criticalThreats.map((t) => t.id),
+          phishingIndicators: phishingResult.threats.map((t) => t.id),
         });
 
         return;
@@ -5275,7 +5285,7 @@ if (window.checkExtensionLoaded) {
               clearTimeout(domScanTimeout);
             }
             domScanTimeout = setTimeout(() => {
-              runProtection(true, { scanCleaned: true });
+              runProtection(true, false, { scanCleaned: true });
               domScanTimeout = null;
             }, 1000);
           } else if (newElementsAdded) {
@@ -5309,7 +5319,7 @@ if (window.checkExtensionLoaded) {
             "🔍 Fallback timer scanning cleaned page source while banner is displayed"
           );
           // Scan cleaned page source (banner and injected elements removed)
-          runProtection(true, { scanCleaned: true });
+          runProtection(true, false, { scanCleaned: true });
           clearInterval(checkInterval);
           return;
         }
@@ -6474,8 +6484,8 @@ if (window.checkExtensionLoaded) {
 
     if (message.type === "RETRIGGER_ANALYSIS") {
       try {
-        logger.log("🔄 POPUP REQUEST: Re-triggering analysis");
-        runProtection(true); // Force re-run
+        logger.log("🔄 POPUP REQUEST: Re-triggering analysis (forced)");
+        runProtection(true, true); // Force re-run with forceRescan flag
         sendResponse({ success: true });
       } catch (error) {
         logger.error("Failed to retrigger analysis:", error);
