@@ -140,7 +140,7 @@
           "office.*sign\\s*in"
         ],
         "description": "Page title contains Microsoft branding with sign-in/login keywords",
-        "weight": 2,
+        "weight": 0.5,
         "category": "secondary"
       },
       {
@@ -167,7 +167,7 @@
           "azure"
         ],
         "description": "Open Graph title contains Microsoft branding",
-        "weight": 1,
+        "weight": 0.5,
         "category": "secondary"
       },
       {
