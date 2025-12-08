@@ -2345,11 +2345,15 @@ if (window.checkExtensionLoaded) {
         );
       }
 
-      // Log first few indicators for debugging
-      const firstThree = detectionRules.phishing_indicators.slice(0, 3);
-      logger.log("📋 First 3 indicators:");
-      firstThree.forEach((ind, i) => {
-        logger.log(`   ${i + 1}. ${ind.id}: ${ind.pattern} (${ind.severity})`);
+      // Log ALL indicators for debugging
+      logger.log(`📋 All ${detectionRules.phishing_indicators.length} indicators loaded:`);
+      detectionRules.phishing_indicators.forEach((ind, i) => {
+        const patternPreview = ind.pattern 
+          ? ind.pattern.substring(0, 50) + (ind.pattern.length > 50 ? '...' : '')
+          : ind.code_driven 
+            ? `[code-driven: ${ind.code_logic?.type || 'unknown'}]`
+            : '[no pattern]';
+        logger.log(`   ${i + 1}. ${ind.id}: ${patternPreview} (${ind.severity})`);
       });
 
       // If forceMainThreadPhishingProcessing is enabled, skip Web Worker and use main thread directly
@@ -3938,6 +3942,18 @@ if (window.checkExtensionLoaded) {
           logger.warn(
             `🚨 PHISHING INDICATORS FOUND on non-Microsoft page: ${phishingResult.threats.length} threats`
           );
+          // Log ALL detected threats
+          logger.log('📋 Detailed threat breakdown:');
+          phishingResult.threats.forEach((threat, idx) => {
+            logger.log(
+              `   ${idx + 1}. [${threat.severity.toUpperCase()}] ${threat.id} ` +
+              `(confidence: ${threat.confidence || 'N/A'})`
+            );
+            logger.log(`      ${threat.description}`);
+            if (threat.matchDetails) {
+              logger.log(`      Matched in: ${threat.matchDetails}`);
+            }
+          });
 
           // Check for critical threats that should be blocked regardless
           const criticalThreats = phishingResult.threats.filter(
