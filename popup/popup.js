@@ -1339,13 +1339,33 @@ class CheckPopup {
     try {
       this.showNotification("Re-triggering analysis...", "info");
 
+      // First, ensure background script is awake (wake it up with a ping)
+      const backgroundReady = await this.checkBackgroundScript();
+      if (!backgroundReady) {
+        console.warn("Check: Background script not responding, trying to wake it up");
+        // Try to wake it up by waiting a bit
+        const wakeupSuccess = await this.waitForBackgroundScript();
+        if (!wakeupSuccess) {
+          console.error("Check: Failed to wake up background script");
+          this.showNotification(
+            "Extension background script is not responding. Try reloading the extension.",
+            "error"
+          );
+          return;
+        }
+      }
+
       // Send message to content script to re-run protection
       chrome.tabs.sendMessage(
         this.currentTab.id,
         { type: "RETRIGGER_ANALYSIS" },
         (response) => {
           if (chrome.runtime.lastError) {
-            this.showNotification("Failed to communicate with page", "error");
+            console.error("Check: Failed to communicate with page:", chrome.runtime.lastError);
+            this.showNotification(
+              "Failed to communicate with page. Content script may not be loaded on this page.",
+              "error"
+            );
             return;
           }
 
