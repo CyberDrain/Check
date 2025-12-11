@@ -36,7 +36,7 @@
     "^https:\\/\\/([^.]+\\.)*live\\.com(/.*)?$"
   ],
   "exclusion_system": {
-    "description": "Centralized exclusion system to prevent false positives on legitimate sites",
+    "description": "Centralized exclusion system to prevent false positives on legitimate sites (Microsoft partners, SSO providers, major platforms)",
     "domain_patterns": [
       "^https:\\/\\/[^/]*\\.cipp\\.app(/.*)?$",
       "^https:\\/\\/(.*\\.)?cyberdrain\\.com(/.*)?$",
@@ -58,7 +58,22 @@
     ],
     "context_indicators": {
       "description": "Additional context that indicates legitimate discussion vs phishing",
-      "legitimate_contexts": [],
+      "legitimate_contexts": [
+        "migration tool",
+        "governance tool",
+        "management platform",
+        "consulting services",
+        "microsoft partner",
+        "microsoft 365 solutions",
+        "microsoft 365 migration",
+        "microsoft 365 governance",
+        "sharepoint migration",
+        "tenant migration",
+        "tenant-to-tenant",
+        "cloud migration",
+        "microsoft 365 management",
+        "copilot readiness"
+      ],
       "legitimate_sso_patterns": [],
       "suspicious_contexts": [
         "verify now",
@@ -559,7 +574,7 @@
       "description": "Form with submit listeners that modify action attribute",
       "action": "block",
       "category": "dom_manipulation",
-      "confidence": 0.90,
+      "confidence": 0.9,
       "weight": 20
     },
     {
@@ -593,7 +608,11 @@
           },
           {
             "type": "substring_present",
-            "values": ["microsoft", "office", "365"]
+            "values": [
+              "microsoft",
+              "office",
+              "365"
+            ]
           }
         ]
       },
@@ -629,7 +648,9 @@
       "code_logic": {
         "type": "resource_from_domain",
         "resource_type": "customcss",
-        "allowed_domains": ["aadcdn.msftauthimages.net"],
+        "allowed_domains": [
+          "aadcdn.msftauthimages.net"
+        ],
         "invert": true
       },
       "severity": "high",
@@ -645,27 +666,68 @@
         "type": "all_of",
         "operations": [
           {
-            "type": "substring_present",
-            "values": ["microsoft", "office", "365"]
+            "type": "all_of",
+            "operations": [
+              {
+                "type": "substring_present",
+                "values": [
+                  "microsoft",
+                  "office",
+                  "365"
+                ]
+              },
+              {
+                "type": "substring_present",
+                "values": [
+                  "login",
+                  "password",
+                  "signin"
+                ]
+              },
+              {
+                "type": "pattern_count",
+                "patterns": [
+                  "<form[^>]*action"
+                ],
+                "flags": "i",
+                "min_count": 1
+              },
+              {
+                "type": "has_but_not",
+                "required": [
+                  "action"
+                ],
+                "prohibited": [
+                  "login.microsoftonline.com",
+                  ".auth/login/",
+                  "azure static web apps",
+                  "easy auth"
+                ]
+              }
+            ]
           },
           {
-            "type": "substring_present",
-            "values": ["login", "password", "signin"]
-          },
-          {
-            "type": "pattern_count",
-            "patterns": ["<form[^>]*action"],
-            "flags": "i",
-            "min_count": 1
-          },
-          {
-            "type": "has_but_not",
-            "required": ["action"],
+            "type": "not_if_contains",
             "prohibited": [
-              "login.microsoftonline.com",
-              ".auth/login/",
-              "azure static web apps",
-              "easy auth"
+              "migration tool",
+              "governance tool",
+              "management platform",
+              "consulting service",
+              "microsoft partner",
+              "solutions provider",
+              "microsoft 365 migration",
+              "microsoft 365 governance",
+              "sharepoint migration",
+              "tenant migration",
+              "tenant-to-tenant migration",
+              "microsoft 365 management",
+              "microsoft 365 solutions",
+              "build a secure",
+              "ai-ready microsoft",
+              "copilot readiness",
+              "microsoft teams management",
+              "azure active directory management",
+              "office 365 migration"
             ]
           }
         ]
@@ -684,13 +746,21 @@
         "operations": [
           {
             "type": "substring_count",
-            "substrings": ["loginfmt", "i0116", "idSIButton9"],
+            "substrings": [
+              "loginfmt",
+              "i0116",
+              "idSIButton9"
+            ],
             "min_count": 2
           },
           {
             "type": "has_but_not",
-            "required": ["password"],
-            "prohibited": ["login.microsoftonline.com"]
+            "required": [
+              "password"
+            ],
+            "prohibited": [
+              "login.microsoftonline.com"
+            ]
           }
         ]
       },
@@ -717,16 +787,54 @@
         "type": "all_of",
         "operations": [
           {
-            "type": "substring_present",
-            "values": ["microsoft", "office", "365"]
+            "type": "all_of",
+            "operations": [
+              {
+                "type": "substring_present",
+                "values": [
+                  "microsoft",
+                  "office",
+                  "365"
+                ]
+              },
+              {
+                "type": "substring_present",
+                "values": [
+                  "password",
+                  "passwd"
+                ]
+              },
+              {
+                "type": "form_action_check",
+                "required_domains": [
+                  "login.microsoftonline.com"
+                ]
+              }
+            ]
           },
           {
-            "type": "substring_present",
-            "values": ["password", "passwd"]
-          },
-          {
-            "type": "form_action_check",
-            "required_domains": ["login.microsoftonline.com"]
+            "type": "not_if_contains",
+            "prohibited": [
+              "migration tool",
+              "governance tool",
+              "management platform",
+              "consulting service",
+              "microsoft partner",
+              "solutions provider",
+              "microsoft 365 migration",
+              "microsoft 365 governance",
+              "sharepoint migration",
+              "tenant migration",
+              "tenant-to-tenant migration",
+              "microsoft 365 management",
+              "microsoft 365 solutions",
+              "build a secure",
+              "ai-ready microsoft",
+              "copilot readiness",
+              "microsoft teams management",
+              "azure active directory management",
+              "office 365 migration"
+            ]
           }
         ]
       },
@@ -740,67 +848,96 @@
       "id": "phi_014_devtools_blocking",
       "code_driven": true,
       "code_logic": {
-        "type": "obfuscation_check",
-        "indicators": [
-          "debugger",
-          "devtools",
-          "devtool",
-          "F12",
-          "f12",
-          "contextmenu",
-          "selectstart",
-          "dragstart",
-          "setInterval(function(){debugger;}",
-          "setInterval(function(){debugger}",
-          "while(true){debugger;}",
-          "while(true){debugger}",
-          "while(1){debugger",
-          "keyCode === 123",
-          "keyCode==123",
-          "keyCode == 123",
-          "which === 123",
-          "which==123",
-          "which == 123",
-          "keyCode===0x7b",
-          "keyCode==0x7b",
-          "keyCode == 0x7b",
-          "console.clear()",
-          "console.clear",
-          "addEventListener('contextmenu'",
-          "addEventListener(\"contextmenu\"",
-          "oncontextmenu=\"return false\"",
-          "oncontextmenu='return false'",
-          "onselectstart=\"return false\"",
-          "onselectstart='return false'",
-          "ondragstart=\"return false\"",
-          "ondragstart='return false'",
-          "function(_0x",
-          "_0x506b",
-          "_0x",
-          "ctrlKey&&",
-          "shiftKey&&",
-          "preventDefault().*console",
-          "preventDefault().*error",
-          "attempt mitigated",
-          "Inspect element attempt mitigated",
-          "Console attempt mitigated",
-          "Right-click attempt mitigated",
-          "F12 attempt mitigated",
-          "DevTools attempt mitigated",
-          "antiDebug",
-          "anti-debug",
-          "enableSecurityFeatures",
-          "blockDevTools",
-          "detectDevTools",
-          "setInterval.*redirect",
-          "document.onkeydown",
-          "document.onkeypress",
-          "window.onkeydown",
-          "event.ctrlKey",
-          "event.shiftKey",
-          "event.keyCode"
-        ],
-        "min_matches": 2
+        "type": "all_of",
+        "operations": [
+          {
+            "type": "obfuscation_check",
+            "indicators": [
+              "debugger",
+              "devtools",
+              "devtool",
+              "F12",
+              "f12",
+              "contextmenu",
+              "selectstart",
+              "dragstart",
+              "setInterval(function(){debugger;}",
+              "setInterval(function(){debugger}",
+              "while(true){debugger;}",
+              "while(true){debugger}",
+              "while(1){debugger",
+              "keyCode === 123",
+              "keyCode==123",
+              "keyCode == 123",
+              "which === 123",
+              "which==123",
+              "which == 123",
+              "keyCode===0x7b",
+              "keyCode==0x7b",
+              "keyCode == 0x7b",
+              "console.clear()",
+              "console.clear",
+              "addEventListener('contextmenu'",
+              "addEventListener(\"contextmenu\"",
+              "oncontextmenu=\"return false\"",
+              "oncontextmenu='return false'",
+              "onselectstart=\"return false\"",
+              "onselectstart='return false'",
+              "ondragstart=\"return false\"",
+              "ondragstart='return false'",
+              "function(_0x",
+              "_0x506b",
+              "_0x",
+              "ctrlKey&&",
+              "shiftKey&&",
+              "preventDefault().*console",
+              "preventDefault().*error",
+              "attempt mitigated",
+              "Inspect element attempt mitigated",
+              "Console attempt mitigated",
+              "Right-click attempt mitigated",
+              "F12 attempt mitigated",
+              "DevTools attempt mitigated",
+              "antiDebug",
+              "anti-debug",
+              "enableSecurityFeatures",
+              "blockDevTools",
+              "detectDevTools",
+              "setInterval.*redirect",
+              "document.onkeydown",
+              "document.onkeypress",
+              "window.onkeydown",
+              "event.ctrlKey",
+              "event.shiftKey",
+              "event.keyCode"
+            ],
+            "min_matches": 2
+          },
+          {
+            "type": "not_if_contains",
+            "prohibited": [
+              "migration tool",
+              "governance tool",
+              "management platform",
+              "consulting service",
+              "microsoft partner",
+              "solutions provider",
+              "microsoft 365 migration",
+              "microsoft 365 governance",
+              "sharepoint migration",
+              "tenant migration",
+              "tenant-to-tenant migration",
+              "microsoft 365 management",
+              "microsoft 365 solutions",
+              "build a secure",
+              "ai-ready microsoft",
+              "copilot readiness",
+              "microsoft teams management",
+              "azure active directory management",
+              "office 365 migration"
+            ]
+          }
+        ]
       },
       "severity": "high",
       "description": "Page attempts to block or detect developer tools usage",
@@ -815,43 +952,72 @@
         "type": "all_of",
         "operations": [
           {
-            "type": "obfuscation_check",
-            "indicators": [
-              "eval(atob(",
-              "eval(unescape(",
-              "eval(decodeURIComponent(",
-              "eval (atob(",
-              "eval (unescape(",
-              "Function(atob(",
-              "Function(unescape(",
-              "new Function(atob(",
-              "new Function(unescape(",
-              "setInterval(eval(",
-              "setTimeout(eval(",
-              "setInterval(atob(",
-              "setTimeout(atob(",
-              "document.write(atob(",
-              "document.write(unescape(",
-              "document.write(decodeURIComponent(",
-              ".innerHTML=atob(",
-              ".innerHTML=unescape(",
-              ".innerHTML=eval(",
-              "String.fromCharCode",
-              "fromCharCode"
-            ],
-            "min_matches": 1
+            "type": "all_of",
+            "operations": [
+              {
+                "type": "obfuscation_check",
+                "indicators": [
+                  "eval(atob(",
+                  "eval(unescape(",
+                  "eval(decodeURIComponent(",
+                  "eval (atob(",
+                  "eval (unescape(",
+                  "Function(atob(",
+                  "Function(unescape(",
+                  "new Function(atob(",
+                  "new Function(unescape(",
+                  "setInterval(eval(",
+                  "setTimeout(eval(",
+                  "setInterval(atob(",
+                  "setTimeout(atob(",
+                  "document.write(atob(",
+                  "document.write(unescape(",
+                  "document.write(decodeURIComponent(",
+                  ".innerHTML=atob(",
+                  ".innerHTML=unescape(",
+                  ".innerHTML=eval(",
+                  "String.fromCharCode",
+                  "fromCharCode"
+                ],
+                "min_matches": 1
+              },
+              {
+                "type": "substring_present",
+                "values": [
+                  "microsoft",
+                  "office",
+                  "365",
+                  "login",
+                  "password",
+                  "credential",
+                  "signin",
+                  "sign-in"
+                ]
+              }
+            ]
           },
           {
-            "type": "substring_present",
-            "values": [
-              "microsoft",
-              "office",
-              "365",
-              "login",
-              "password",
-              "credential",
-              "signin",
-              "sign-in"
+            "type": "not_if_contains",
+            "prohibited": [
+              "migration tool",
+              "governance tool",
+              "management platform",
+              "consulting service",
+              "microsoft partner",
+              "solutions provider",
+              "microsoft 365 migration",
+              "microsoft 365 governance",
+              "sharepoint migration",
+              "tenant migration",
+              "tenant-to-tenant migration",
+              "microsoft 365 management",
+              "microsoft 365 solutions",
+              "build a secure",
+              "ai-ready microsoft",
+              "copilot readiness",
+              "microsoft teams management",
+              "azure active directory management",
+              "office 365 migration"
             ]
           }
         ]
@@ -898,12 +1064,17 @@
     },
     {
       "id": "phi_001_enhanced",
+      "severity": "critical",
+      "description": "Enhanced detection of domains mimicking Microsoft services with security/login keywords (excludes legitimate SSO)",
+      "action": "block",
+      "category": "domain_spoofing",
+      "confidence": 0.95,
       "code_driven": true,
       "code_logic": {
         "type": "has_but_not",
         "required": [
           "secure-microsoft",
-          "secure-office", 
+          "secure-office",
           "secure-365",
           "secure-outlook",
           "securemicrosoft",
@@ -940,19 +1111,12 @@
           "authenticate with microsoft",
           "sso microsoft",
           "oauth microsoft",
-          "third party auth",
-          "third-party auth",
           ".auth/login/",
           "azure static web apps",
           "easy auth",
           "easyauth"
         ]
-      },
-      "severity": "critical",
-      "description": "Enhanced detection of domains mimicking Microsoft services with security/login keywords (excludes legitimate SSO)",
-      "action": "block",
-      "category": "domain_spoofing",
-      "confidence": 0.95
+      }
     },
     {
       "id": "phi_002",
@@ -961,70 +1125,109 @@
         "type": "all_of",
         "operations": [
           {
-            "type": "substring_present",
-            "values": ["microsoft", "office", "365", "outlook", "azure"]
-          },
-          {
-            "type": "any_of",
+            "type": "all_of",
             "operations": [
               {
-                "type": "substring_proximity",
-                "word1": "security",
-                "word2": "team",
-                "max_distance": 300
+                "type": "substring_present",
+                "values": [
+                  "microsoft",
+                  "office",
+                  "365",
+                  "outlook",
+                  "azure"
+                ]
               },
               {
-                "type": "substring_proximity",
-                "word1": "security",
-                "word2": "department",
-                "max_distance": 300
+                "type": "any_of",
+                "operations": [
+                  {
+                    "type": "substring_proximity",
+                    "word1": "security",
+                    "word2": "team",
+                    "max_distance": 300
+                  },
+                  {
+                    "type": "substring_proximity",
+                    "word1": "security",
+                    "word2": "department",
+                    "max_distance": 300
+                  },
+                  {
+                    "type": "substring_proximity",
+                    "word1": "security",
+                    "word2": "support",
+                    "max_distance": 300
+                  },
+                  {
+                    "type": "substring_proximity",
+                    "word1": "verification",
+                    "word2": "team",
+                    "max_distance": 300
+                  },
+                  {
+                    "type": "substring_proximity",
+                    "word1": "verification",
+                    "word2": "department",
+                    "max_distance": 300
+                  },
+                  {
+                    "type": "substring_proximity",
+                    "word1": "account",
+                    "word2": "team",
+                    "max_distance": 300
+                  },
+                  {
+                    "type": "substring_proximity",
+                    "word1": "account",
+                    "word2": "support",
+                    "max_distance": 300
+                  }
+                ]
               },
               {
-                "type": "substring_proximity",
-                "word1": "security",
-                "word2": "support",
-                "max_distance": 300
-              },
-              {
-                "type": "substring_proximity",
-                "word1": "verification",
-                "word2": "team",
-                "max_distance": 300
-              },
-              {
-                "type": "substring_proximity",
-                "word1": "verification",
-                "word2": "department",
-                "max_distance": 300
-              },
-              {
-                "type": "substring_proximity",
-                "word1": "account",
-                "word2": "team",
-                "max_distance": 300
-              },
-              {
-                "type": "substring_proximity",
-                "word1": "account",
-                "word2": "support",
-                "max_distance": 300
+                "type": "has_but_not",
+                "required": [
+                  "team",
+                  "department",
+                  "support"
+                ],
+                "prohibited": [
+                  "sign in with microsoft",
+                  "continue with microsoft",
+                  "login with microsoft",
+                  "sso",
+                  "oauth",
+                  "third party auth",
+                  "third-party auth",
+                  ".auth/login/",
+                  "azure static web apps",
+                  "easy auth"
+                ]
               }
             ]
           },
           {
-            "type": "has_but_not",
-            "required": ["team", "department", "support"],
+            "type": "not_if_contains",
             "prohibited": [
-              "sign in with microsoft",
-              "continue with microsoft",
-              "login with microsoft",
-              "sso",
-              "oauth",
-              "third party auth",
-              "third-party auth",
-              ".auth/login/",
-              "azure static web apps",
-              "easy auth"
+              "migration tool",
+              "governance tool",
+              "management platform",
+              "consulting service",
+              "microsoft partner",
+              "solutions provider",
+              "microsoft 365 migration",
+              "microsoft 365 governance",
+              "sharepoint migration",
+              "tenant migration",
+              "tenant-to-tenant migration",
+              "microsoft 365 management",
+              "microsoft 365 solutions",
+              "build a secure",
+              "ai-ready microsoft",
+              "copilot readiness",
+              "microsoft teams management",
+              "azure active directory management",
+              "office 365 migration"
             ]
           }
         ]
@@ -1039,31 +1242,198 @@
       "id": "phi_003",
       "code_driven": true,
       "code_logic": {
-        "type": "multi_proximity",
-        "pairs": [
-          {"words": ["verify", "account"], "max_distance": 50},
-          {"words": ["verify", "information"], "max_distance": 50},
-          {"words": ["verify", "identity"], "max_distance": 50},
-          {"words": ["suspended", "365"], "max_distance": 50},
-          {"words": ["suspended", "account"], "max_distance": 50},
-          {"words": ["suspended", "office"], "max_distance": 50},
-          {"words": ["update", "office"], "max_distance": 50},
-          {"words": ["update", "microsoft"], "max_distance": 50},
-          {"words": ["update", "365"], "max_distance": 50},
-          {"words": ["secure", "microsoft"], "max_distance": 50},
-          {"words": ["secure", "account"], "max_distance": 50},
-          {"words": ["account", "security"], "max_distance": 50},
-          {"words": ["security", "verification"], "max_distance": 50},
-          {"words": ["security", "alert"], "max_distance": 50},
-          {"words": ["login", "microsoft"], "max_distance": 50},
-          {"words": ["microsoft", "login"], "max_distance": 50},
-          {"words": ["microsoft", "authentication"], "max_distance": 50},
-          {"words": ["authentication", "microsoft"], "max_distance": 50},
-          {"words": ["office", "365"], "max_distance": 50},
-          {"words": ["365", "login"], "max_distance": 50},
-          {"words": ["office", "login"], "max_distance": 50},
-          {"words": ["365", "suspended"], "max_distance": 50},
-          {"words": ["office", "suspended"], "max_distance": 50}
+        "type": "all_of",
+        "operations": [
+          {
+            "type": "multi_proximity",
+            "pairs": [
+              {
+                "words": [
+                  "verify",
+                  "account"
+                ],
+                "max_distance": 50
+              },
+              {
+                "words": [
+                  "verify",
+                  "information"
+                ],
+                "max_distance": 50
+              },
+              {
+                "words": [
+                  "verify",
+                  "identity"
+                ],
+                "max_distance": 50
+              },
+              {
+                "words": [
+                  "suspended",
+                  "365"
+                ],
+                "max_distance": 50
+              },
+              {
+                "words": [
+                  "suspended",
+                  "account"
+                ],
+                "max_distance": 50
+              },
+              {
+                "words": [
+                  "suspended",
+                  "office"
+                ],
+                "max_distance": 50
+              },
+              {
+                "words": [
+                  "update",
+                  "office"
+                ],
+                "max_distance": 50
+              },
+              {
+                "words": [
+                  "update",
+                  "microsoft"
+                ],
+                "max_distance": 50
+              },
+              {
+                "words": [
+                  "update",
+                  "365"
+                ],
+                "max_distance": 50
+              },
+              {
+                "words": [
+                  "secure",
+                  "microsoft"
+                ],
+                "max_distance": 50
+              },
+              {
+                "words": [
+                  "secure",
+                  "account"
+                ],
+                "max_distance": 50
+              },
+              {
+                "words": [
+                  "account",
+                  "security"
+                ],
+                "max_distance": 50
+              },
+              {
+                "words": [
+                  "security",
+                  "verification"
+                ],
+                "max_distance": 50
+              },
+              {
+                "words": [
+                  "security",
+                  "alert"
+                ],
+                "max_distance": 50
+              },
+              {
+                "words": [
+                  "login",
+                  "microsoft"
+                ],
+                "max_distance": 50
+              },
+              {
+                "words": [
+                  "microsoft",
+                  "login"
+                ],
+                "max_distance": 50
+              },
+              {
+                "words": [
+                  "microsoft",
+                  "authentication"
+                ],
+                "max_distance": 50
+              },
+              {
+                "words": [
+                  "authentication",
+                  "microsoft"
+                ],
+                "max_distance": 50
+              },
+              {
+                "words": [
+                  "office",
+                  "365"
+                ],
+                "max_distance": 50
+              },
+              {
+                "words": [
+                  "365",
+                  "login"
+                ],
+                "max_distance": 50
+              },
+              {
+                "words": [
+                  "office",
+                  "login"
+                ],
+                "max_distance": 50
+              },
+              {
+                "words": [
+                  "365",
+                  "suspended"
+                ],
+                "max_distance": 50
+              },
+              {
+                "words": [
+                  "office",
+                  "suspended"
+                ],
+                "max_distance": 50
+              }
+            ]
+          },
+          {
+            "type": "not_if_contains",
+            "prohibited": [
+              "migration tool",
+              "governance tool",
+              "management platform",
+              "consulting service",
+              "microsoft partner",
+              "solutions provider",
+              "microsoft 365 migration",
+              "microsoft 365 governance",
+              "sharepoint migration",
+              "tenant migration",
+              "tenant-to-tenant migration",
+              "microsoft 365 management",
+              "microsoft 365 solutions",
+              "build a secure",
+              "ai-ready microsoft",
+              "copilot readiness",
+              "microsoft teams management",
+              "azure active directory management",
+              "office 365 migration"
+            ]
+          }
         ]
       },
       "severity": "high",
@@ -1127,36 +1497,77 @@
         "type": "all_of",
         "operations": [
           {
-            "type": "multi_proximity",
-            "pairs": [
+            "type": "all_of",
+            "operations": [
               {
-                "words": ["microsoft", "login"],
-                "max_distance": 750
+                "type": "multi_proximity",
+                "pairs": [
+                  {
+                    "words": [
+                      "microsoft",
+                      "login"
+                    ],
+                    "max_distance": 750
+                  },
+                  {
+                    "words": [
+                      "office",
+                      "sign in"
+                    ],
+                    "max_distance": 750
+                  },
+                  {
+                    "words": [
+                      "365",
+                      "authentication"
+                    ],
+                    "max_distance": 750
+                  }
+                ]
               },
               {
-                "words": ["office", "sign in"],
-                "max_distance": 750
-              },
-              {
-                "words": ["365", "authentication"],
-                "max_distance": 750
+                "type": "has_but_not",
+                "required": [
+                  "login",
+                  "sign"
+                ],
+                "prohibited": [
+                  "sign in with microsoft",
+                  "continue with microsoft",
+                  "sso",
+                  "oauth",
+                  ".auth/login/",
+                  "easy auth",
+                  "discussion",
+                  "forum",
+                  "tutorial",
+                  "documentation"
+                ]
               }
             ]
           },
           {
-            "type": "has_but_not",
-            "required": ["login", "sign"],
+            "type": "not_if_contains",
             "prohibited": [
-              "sign in with microsoft",
-              "continue with microsoft",
-              "sso",
-              "oauth",
-              ".auth/login/",
-              "easy auth",
-              "discussion",
-              "forum",
-              "tutorial",
-              "documentation"
+              "migration tool",
+              "governance tool",
+              "management platform",
+              "consulting service",
+              "microsoft partner",
+              "solutions provider",
+              "microsoft 365 migration",
+              "microsoft 365 governance",
+              "sharepoint migration",
+              "tenant migration",
+              "tenant-to-tenant migration",
+              "microsoft 365 management",
+              "microsoft 365 solutions",
+              "build a secure",
+              "ai-ready microsoft",
+              "copilot readiness",
+              "microsoft teams management",
+              "azure active directory management",
+              "office 365 migration"
             ]
           }
         ]
@@ -1179,9 +1590,9 @@
           "-ms-user-select: none"
         ]
       },
-      "severity": "high",
-      "description": "CSS prevents text selection - anti-analysis technique",
-      "action": "block",
+      "severity": "low",
+      "description": "CSS prevents text selection - anti-analysis technique (supporting evidence - should not block alone)",
+      "action": "warn",
       "category": "anti_analysis",
       "confidence": 0.85
     },
@@ -1199,9 +1610,9 @@
       "id": "phi_025_honeypot_fields",
       "pattern": "(?:position\\s*:\\s*absolute\\s*!important\\s*;[^}]*left\\s*:\\s*\\-9999px)|(?:visibility\\s*:\\s*hidden\\s*!important)|(?:opacity\\s*:\\s*0\\s*!important[^}]*width\\s*:\\s*0)",
       "flags": "i",
-      "severity": "high",
-      "description": "Honeypot fields used to detect and filter automated bot submissions",
-      "action": "block",
+      "severity": "low",
+      "description": "Honeypot fields used to detect and filter automated bot submissions (supporting evidence - should not block alone)",
+      "action": "warn",
       "category": "anti_analysis",
       "confidence": 0.9
     },
@@ -1216,9 +1627,9 @@
         "flags": "i",
         "min_count": 1
       },
-      "severity": "high",
-      "description": "Obfuscated links with empty tags - phishing technique",
-      "action": "block",
+      "severity": "medium",
+      "description": "Obfuscated links with empty tags - phishing technique (supporting evidence - should not block alone)",
+      "action": "warn",
       "category": "suspicious_structure",
       "confidence": 0.95
     },
@@ -1234,9 +1645,9 @@
         "flags": "i",
         "min_count": 1
       },
-      "severity": "high",
-      "description": "Multiple empty tags used to obfuscate text",
-      "action": "block",
+      "severity": "medium",
+      "description": "Multiple empty tags used to obfuscate text (supporting evidence - should not block alone)",
+      "action": "warn",
       "category": "text_obfuscation",
       "confidence": 0.9
     }
@@ -1246,7 +1657,7 @@
       "id": "leg_001",
       "pattern": "login\\.microsoftonline\\.com",
       "description": "Official Microsoft Online login domain",
-      "confidence": 1.0
+      "confidence": 1
     },
     {
       "id": "leg_002",
@@ -1294,7 +1705,7 @@
         "https:\\/\\/*.bing.com/"
       ],
       "description": "Required domains in content-security-policy-report-only header",
-      "confidence": 1.0
+      "confidence": 1
     },
     {
       "id": "leg_006",
