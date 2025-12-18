@@ -1,3 +1,8 @@
+---
+hidden: true
+noIndex: true
+---
+
 # Firefox Support
 
 Check fully supports Firefox 109+ with all the same phishing protection features available in Chrome and Edge. This page covers installation, deployment, and Firefox-specific considerations.
@@ -35,26 +40,28 @@ git checkout manifest.json
 The Firefox version of Check includes several technical differences from the Chrome/Edge version to ensure compatibility:
 
 ### Manifest Differences
-- **Background Scripts**: Uses `background.scripts` instead of `service_worker`
-- **Content Scripts**: Excludes `file:///` protocol (not supported in Firefox)
-- **Options Page**: Uses `options_ui` instead of `options_page`
-- **Browser Settings**: Includes `browser_specific_settings` with Gecko ID `check@cyberdrain.com`
-- **Permissions**: Excludes `identity.email` permission (not needed in Firefox)
+
+* **Background Scripts**: Uses `background.scripts` instead of `service_worker`
+* **Content Scripts**: Excludes `file:///` protocol (not supported in Firefox)
+* **Options Page**: Uses `options_ui` instead of `options_page`
+* **Browser Settings**: Includes `browser_specific_settings` with Gecko ID `check@cyberdrain.com`
+* **Permissions**: Excludes `identity.email` permission (not needed in Firefox)
 
 ### Cross-Browser Compatibility
 
 Check uses a browser polyfill (`scripts/browser-polyfill.js`) to handle API differences between Chrome and Firefox automatically. This ensures that:
-- Extension APIs work consistently across browsers
-- Code can be written once and work everywhere
-- Updates maintain compatibility with all supported browsers
+
+* Extension APIs work consistently across browsers
+* Code can be written once and work everywhere
+* Updates maintain compatibility with all supported browsers
 
 ## Enterprise Deployment
 
 ### Prerequisites
 
-- Firefox 109 or later
-- Administrator access for system-wide deployment
-- Extension signed by Mozilla (for permanent installation)
+* Firefox 109 or later
+* Administrator access for system-wide deployment
+* Extension signed by Mozilla (for permanent installation)
 
 ### Deployment Methods
 
@@ -62,36 +69,35 @@ Firefox supports enterprise deployment through the `policies.json` file. This me
 
 #### Windows Deployment
 
-1. Create or edit the policies file at:
-   ```
-   %ProgramFiles%\Mozilla Firefox\distribution\policies.json
-   ```
+1.  Create or edit the policies file at:
 
+    ```
+    %ProgramFiles%\Mozilla Firefox\distribution\policies.json
+    ```
 2. Use the template from `enterprise/firefox/policies.json` in the repository
+3.  Update the `install_url` to point to your signed .xpi file:
 
-3. Update the `install_url` to point to your signed .xpi file:
-   ```json
-   {
-     "policies": {
-       "Extensions": {
-         "Install": ["https://your-server.com/check-extension.xpi"]
-       }
-     }
-   }
-   ```
+    ```json
+    {
+      "policies": {
+        "Extensions": {
+          "Install": ["https://your-server.com/check-extension.xpi"]
+        }
+      }
+    }
+    ```
 
 #### macOS/Linux Deployment
 
 1. Create the policies file at:
-   - **macOS**: `/Applications/Firefox.app/Contents/Resources/distribution/policies.json`
-   - **Linux**: `/etc/firefox/policies/policies.json` or `/usr/lib/firefox/distribution/policies.json`
-
+   * **macOS**: `/Applications/Firefox.app/Contents/Resources/distribution/policies.json`
+   * **Linux**: `/etc/firefox/policies/policies.json` or `/usr/lib/firefox/distribution/policies.json`
 2. Use the template from `enterprise/firefox/policies.json`
+3.  Set proper permissions:
 
-3. Set proper permissions:
-   ```bash
-   sudo chmod 644 /path/to/policies.json
-   ```
+    ```bash
+    sudo chmod 644 /path/to/policies.json
+    ```
 
 ### Extension Configuration
 
@@ -167,6 +173,7 @@ To force-install Check and prevent users from disabling it:
 ### Development Signing
 
 For testing purposes, you can use Firefox's developer mode:
+
 1. Navigate to `about:config`
 2. Set `xpinstall.signatures.required` to `false`
 3. Load the extension as a temporary add-on
@@ -180,11 +187,12 @@ Disabling signature verification is only recommended for development and testing
 For production deployment, you need to sign the extension with Mozilla:
 
 1. Create a Mozilla Add-ons account at [addons.mozilla.org](https://addons.mozilla.org)
-2. Package your extension:
-   ```bash
-   npm run build:firefox
-   zip -r check-firefox.zip . -x ".*" "node_modules/*" "tests/*" "*.md" "manifest.chrome.json"
-   ```
+2.  Package your extension:
+
+    ```bash
+    npm run build:firefox
+    zip -r check-firefox.zip . -x ".*" "node_modules/*" "tests/*" "*.md" "manifest.chrome.json"
+    ```
 3. Submit to Mozilla for signing (unlisted distribution for enterprise)
 4. Download the signed .xpi file
 5. Host the .xpi file on your server or use Mozilla's CDN
@@ -192,6 +200,7 @@ For production deployment, you need to sign the extension with Mozilla:
 ### Self-Distribution
 
 For enterprise environments, you can self-distribute the signed .xpi:
+
 1. Host the .xpi file on an internal web server
 2. Configure `policies.json` with your internal URL
 3. Deploy the policies file to managed devices
@@ -203,9 +212,9 @@ For enterprise environments, you can self-distribute the signed .xpi:
 1. Load the extension using the Quick Start instructions
 2. Open the test page: `test-extension-loading.html`
 3. Verify that all components load correctly:
-   - Background scripts initialize
-   - Content scripts inject on pages
-   - Popup and options pages display correctly
+   * Background scripts initialize
+   * Content scripts inject on pages
+   * Popup and options pages display correctly
 
 ### Testing Detection Rules
 
@@ -218,18 +227,18 @@ For enterprise environments, you can self-distribute the signed .xpi:
 
 When contributing or making changes, always test in both Chrome/Edge and Firefox:
 
-1. Test in Chrome/Edge:
-   ```bash
-   npm run build:chrome
-   # Load in Chrome
-   ```
+1.  Test in Chrome/Edge:
 
-2. Test in Firefox:
-   ```bash
-   npm run build:firefox
-   # Load in Firefox
-   ```
+    ```bash
+    npm run build:chrome
+    # Load in Chrome
+    ```
+2.  Test in Firefox:
 
+    ```bash
+    npm run build:firefox
+    # Load in Firefox
+    ```
 3. Verify consistent behavior across browsers
 4. Check for Firefox-specific console errors or warnings
 
@@ -240,64 +249,71 @@ When contributing or making changes, always test in both Chrome/Edge and Firefox
 **Problem**: Extension doesn't load or shows errors
 
 **Solutions**:
-- Ensure you ran `npm run build:firefox` before loading
-- Check that Firefox version is 109 or later
-- Look for errors in Browser Console (Ctrl+Shift+J)
-- Verify manifest.json has Firefox-specific structure
+
+* Ensure you ran `npm run build:firefox` before loading
+* Check that Firefox version is 109 or later
+* Look for errors in Browser Console (Ctrl+Shift+J)
+* Verify manifest.json has Firefox-specific structure
 
 ### Background Scripts Not Working
 
 **Problem**: Background functionality fails in Firefox
 
 **Solutions**:
-- Firefox uses `background.scripts` not `service_worker`
-- Verify the build script ran successfully
-- Check for module loading errors in the Browser Console
+
+* Firefox uses `background.scripts` not `service_worker`
+* Verify the build script ran successfully
+* Check for module loading errors in the Browser Console
 
 ### Policies Not Applied
 
 **Problem**: Enterprise policies not taking effect
 
 **Solutions**:
-- Verify policies.json is in the correct location for your OS
-- Check file permissions (must be readable by Firefox)
-- Restart Firefox after adding/modifying policies
-- Use `about:policies` to verify policy application
-- Check JSON syntax in policies.json
+
+* Verify policies.json is in the correct location for your OS
+* Check file permissions (must be readable by Firefox)
+* Restart Firefox after adding/modifying policies
+* Use `about:policies` to verify policy application
+* Check JSON syntax in policies.json
 
 ### Extension Removed on Restart
 
 **Problem**: Extension disappears when Firefox restarts
 
 **Solutions**:
-- Temporary add-ons are removed on restart - this is expected
-- For permanent installation, use enterprise deployment with signed .xpi
-- Alternatively, sign the extension through Mozilla's process
+
+* Temporary add-ons are removed on restart - this is expected
+* For permanent installation, use enterprise deployment with signed .xpi
+* Alternatively, sign the extension through Mozilla's process
 
 ### Content Scripts Not Injecting
 
 **Problem**: Content scripts don't run on web pages
 
 **Solutions**:
-- Firefox doesn't support `file:///` protocol in content scripts
-- Ensure you're testing on `http://` or `https://` URLs
-- Check content script permissions in manifest
+
+* Firefox doesn't support `file:///` protocol in content scripts
+* Ensure you're testing on `http://` or `https://` URLs
+* Check content script permissions in manifest
 
 ## Firefox Extension ID
 
 The Firefox extension uses the ID: `check@cyberdrain.com`
 
 This ID is configured in the `browser_specific_settings` section of `manifest.firefox.json` and is required for:
-- Enterprise policy management
-- Extension configuration
-- Add-on signing and distribution
+
+* Enterprise policy management
+* Extension configuration
+* Add-on signing and distribution
 
 ## Support
 
 For Firefox-specific issues:
-- Check the [Common Issues](troubleshooting/common-issues.md) guide
-- Review Firefox Browser Console for errors
-- Verify you're using Firefox 109 or later
-- Ensure the extension was built for Firefox using `npm run build:firefox`
 
-For general extension support, see the main [README](../README.md) and [CONTRIBUTING](../CONTRIBUTING.md) guides.
+* Check the [Common Issues](troubleshooting/common-issues.md) guide
+* Review Firefox Browser Console for errors
+* Verify you're using Firefox 109 or later
+* Ensure the extension was built for Firefox using `npm run build:firefox`
+
+For general extension support, see the main [README](../) and [CONTRIBUTING](../CONTRIBUTING.md) guides.

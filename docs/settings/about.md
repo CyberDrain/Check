@@ -1,4 +1,4 @@
-# About Check
+# About
 
 The About section provides information about your Check installation, version details, and links to important resources.
 
@@ -8,15 +8,15 @@ The About section provides information about your Check installation, version de
 
 The About section displays key information about your Check installation:
 
-- **Extension Version** - The current version of the Check extension installed in your browser
-- **Detection Rules Version** - The version of the detection rules currently loaded (from either default or custom source)
-- **Last Updated** - When the detection rules were last refreshed from their source
+* **Extension Version** - The current version of the Check extension installed in your browser
+* **Detection Rules Version** - The version of the detection rules currently loaded (from either default or custom source)
+* **Last Updated** - When the detection rules were last refreshed from their source
 
 This information is useful when:
 
-- Reporting issues to support
-- Verifying you have the latest updates
-- Troubleshooting detection problems
+* Reporting issues to support
+* Verifying you have the latest updates
+* Troubleshooting detection problems
 
 ### Product Information
 
@@ -36,10 +36,11 @@ The About section provides quick access to essential resources:
 
 ### Extension Stores
 
-- **Chrome Web Store** - Download, rate, and review the extension for Chrome and Chromium-based browsers
-- **Edge Web Store** - Download and rate the extension for Microsoft Edge
+* [**Chrome Web Store**](https://chromewebstore.google.com/detail/benimdeioplgkhanklclahllklceahbe) - Download, rate, and review the extension for Chrome and Chromium-based browsers
+* [**Edge Add Ons Store**](https://microsoftedge.microsoft.com/addons/detail/check-by-cyberdrain/knepjpocdagponkonnbggpcnhnaikajg) - Download and rate the extension for Microsoft Edge
+* Firefox Add-Ons - Coming soon!
 
 ### Development and Support
 
-- **[GitHub Repository](https://github.com/CyberDrain/Check)** - View source code, report issues, and contribute to the project
-- **[CyberDrain Website](https://cyberdrain.com)** - Learn more about CyberDrain's solutions and services
+* [**GitHub Repository**](https://github.com/CyberDrain/Check) - View source code, report issues, and contribute to the project
+* [**CyberDrain Website**](https://cyberdrain.com) - Learn more about CyberDrain's solutions and services

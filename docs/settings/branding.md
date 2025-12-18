@@ -12,15 +12,15 @@ Most individual users can skip this section unless they want to personalize the 
 
 All user-facing components (suspicious login banner, blocked page, extension popup, and options page) use the same branding configuration. Your custom branding will be displayed consistently across:
 
-- **Suspicious Login Banner** - Warning banner shown on potentially malicious sites
-- **Blocked Page** - Full-page block screen for confirmed threats
-- **Extension Popup** - Extension icon popup
-- **Options Page** - Extension settings page
+* **Suspicious Login Banner** - Warning banner shown on potentially malicious sites
+* **Blocked Page** - Full-page block screen for confirmed threats
+* **Extension Popup** - Extension icon popup
+* **Options Page** - Extension settings page
 
 ## Company Information
 
 {% hint style="warning" %}
-#### What if Settings Are Not Visible?
+**What if Settings Are Not Visible?**
 
 If some settings do not appear on your version, it means your organization's IT department has set these for you. This is normal in business environments - your IT team wants to make sure everyone has the same security settings. You will also see text indicating that the extension is being managed by policy.
 {% endhint %}
@@ -29,8 +29,8 @@ If some settings do not appear on your version, it means your organization's IT 
 
 You can customize the following properties:
 
-1. **Company Name** - Enter your organization's name. This appears in the extension interface and blocked page messages (displayed as "Protected by [Company Name]").
-2. **Company URL** - Your company website URL (e.g., `https://yourcompany.com`). Used in extension branding and contact information. *(Firefox: required, Chrome/Edge: optional)*
+1. **Company Name** - Enter your organization's name. This appears in the extension interface and blocked page messages (displayed as "Protected by \[Company Name]").
+2. **Company URL** - Your company website URL (e.g., `https://yourcompany.com`). Used in extension branding and contact information. _(Firefox: required, Chrome/Edge: optional)_
 3. **Product Name** - What you want to call the extension (like "Contoso Security" instead of "Check"). This replaces the default "Check" branding throughout the interface.
 4. **Support Email** - Where users should go for help. This email address is used in the "Contact Admin" button when phishing sites are blocked.
 
@@ -56,10 +56,10 @@ The branding preview shows you exactly how your customizations will appear to us
 1. Open the extension's Options page
 2. Navigate to the "Branding" section
 3. Fill in your branding information:
-   - Company Name
-   - Logo (upload or provide URL)
-   - Primary Color
-   - Support Email
+   * Company Name
+   * Logo (upload or provide URL)
+   * Primary Color
+   * Support Email
 4. Click "Save"
 
 Your branding will be immediately applied to all components.
@@ -93,10 +93,9 @@ For enterprise deployments using Windows Group Policy:
 For Firefox deployments, configure branding through the `policies.json` file:
 
 1. Locate or create the policies file:
-   - **Windows:** `%ProgramFiles%\Mozilla Firefox\distribution\policies.json`
-   - **macOS:** `/Applications/Firefox.app/Contents/Resources/distribution/policies.json`
-   - **Linux:** `/etc/firefox/policies/policies.json`
-
+   * **Windows:** `%ProgramFiles%\Mozilla Firefox\distribution\policies.json`
+   * **macOS:** `/Applications/Firefox.app/Contents/Resources/distribution/policies.json`
+   * **Linux:** `/etc/firefox/policies/policies.json`
 2. Add the branding configuration under `3rdparty.Extensions`:
 
 ```json
@@ -199,15 +198,17 @@ Enterprise policies always take precedence over manual settings.
 ## Browser-Specific Notes
 
 ### Firefox
-- Uses extension ID: `check@cyberdrain.com`
-- Configuration is managed through `policies.json` file
-- Supports additional `companyURL` property
-- Policies file location varies by operating system
+
+* Uses extension ID: `check@cyberdrain.com`
+* Configuration is managed through `policies.json` file
+* Supports additional `companyURL` property
+* Policies file location varies by operating system
 
 ### Chrome & Edge
-- Configuration through GPO, Intune, or Chrome Enterprise Policy
-- Uses Windows Registry for advanced configurations
-- Supports standard Chrome extension policy format
+
+* Configuration through GPO, Intune, or Chrome Enterprise Policy
+* Uses Windows Registry for advanced configurations
+* Supports standard Chrome extension policy format
 
 ## Troubleshooting Branding Issues
 
@@ -234,16 +235,18 @@ Enterprise policies always take precedence over manual settings.
 3. Clear your browser cache if problems persist
 
 ### **Branding Not Appearing**
-- Verify the configuration is saved correctly
-- Check browser console for errors
-- Ensure logo URLs are accessible
-- Restart the browser after configuration changes
+
+* Verify the configuration is saved correctly
+* Check browser console for errors
+* Ensure logo URLs are accessible
+* Restart the browser after configuration changes
 
 ### **Enterprise Policy Not Working**
-- Verify the policy is applied to the correct organizational unit
-- Check that the extension ID matches your deployment
-- Allow 15-30 minutes for policy propagation
-- Run `gpupdate /force` on Windows to force policy refresh
+
+* Verify the policy is applied to the correct organizational unit
+* Check that the extension ID matches your deployment
+* Allow 15-30 minutes for policy propagation
+* Run `gpupdate /force` on Windows to force policy refresh
 
 ## Example Configurations
 
@@ -314,14 +317,3 @@ Logo URL: https://assets.globalmfg.com/security/gmi-logo-48.png
   }
 }
 ```
-
-## Additional Resources
-
-### Firefox-Specific Documentation
-- [Firefox Support Guide](../firefox-support.md)
-- [Firefox Deployment Guide](../deployment/firefox-deployment.md)
-- Template: `enterprise/firefox/policies.json`
-
-### Chrome/Edge Documentation
-- [Chrome/Edge Deployment](../deployment/chrome-edge-deployment-instructions/README.md)
-- Schema: `config/managed_schema.json`

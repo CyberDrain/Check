@@ -5,7 +5,7 @@ description: >-
 icon: bolt
 ---
 
-# Deployment Instructions
+# Chrome/Edge Deployment Instructions
 
 Check is available for **Chrome**, **Microsoft Edge**, and **Firefox** with deployment guides for each browser.
 
@@ -17,10 +17,4 @@ Check is available for **Chrome**, **Microsoft Edge**, and **Firefox** with depl
 
 {% content-ref url="macos.md" %}
 [macos.md](macos.md)
-{% endcontent-ref %}
-
-## Firefox Deployment
-
-{% content-ref url="../firefox-deployment.md" %}
-[firefox-deployment.md](../firefox-deployment.md)
 {% endcontent-ref %}

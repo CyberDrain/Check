@@ -1,3 +1,7 @@
+---
+noIndex: true
+---
+
 # Firefox Deployment
 
 This guide covers deploying Check to Firefox across different platforms using enterprise policies.
@@ -12,12 +16,12 @@ The Check extension for Firefox uses the ID: **`check@cyberdrain.com`**
 
 ## Quick Reference
 
-| Platform | Policy File Location |
-|----------|---------------------|
-| Windows | `%ProgramFiles%\Mozilla Firefox\distribution\policies.json` |
-| macOS | `/Applications/Firefox.app/Contents/Resources/distribution/policies.json` |
-| Linux (system) | `/etc/firefox/policies/policies.json` |
-| Linux (app) | `/usr/lib/firefox/distribution/policies.json` |
+| Platform       | Policy File Location                                                      |
+| -------------- | ------------------------------------------------------------------------- |
+| Windows        | `%ProgramFiles%\Mozilla Firefox\distribution\policies.json`               |
+| macOS          | `/Applications/Firefox.app/Contents/Resources/distribution/policies.json` |
+| Linux (system) | `/etc/firefox/policies/policies.json`                                     |
+| Linux (app)    | `/usr/lib/firefox/distribution/policies.json`                             |
 
 ## Prerequisites
 
@@ -36,21 +40,21 @@ For production deployment, you need a signed .xpi file:
 
 #### Option A: Mozilla Add-ons Signing (Recommended)
 
-1. Build the Firefox version:
-   ```bash
-   npm run build:firefox
-   ```
+1.  Build the Firefox version:
 
-2. Package the extension:
-   ```bash
-   zip -r check-firefox.zip . \
-     -x ".*" \
-     -x "node_modules/*" \
-     -x "tests/*" \
-     -x "*.md" \
-     -x "manifest.chrome.json"
-   ```
+    ```bash
+    npm run build:firefox
+    ```
+2.  Package the extension:
 
+    ```bash
+    zip -r check-firefox.zip . \
+      -x ".*" \
+      -x "node_modules/*" \
+      -x "tests/*" \
+      -x "*.md" \
+      -x "manifest.chrome.json"
+    ```
 3. Submit to [addons.mozilla.org](https://addons.mozilla.org) for signing
 4. Download the signed .xpi file
 5. Host on your internal server or use Mozilla's CDN
@@ -58,9 +62,10 @@ For production deployment, you need a signed .xpi file:
 #### Option B: Development Installation
 
 For testing or development:
-- Use temporary add-on installation (no signing required)
-- Enable unsigned extensions in Firefox developer edition
-- Not recommended for production deployments
+
+* Use temporary add-on installation (no signing required)
+* Enable unsigned extensions in Firefox developer edition
+* Not recommended for production deployments
 
 ### 2. Configure policies.json
 
@@ -125,20 +130,20 @@ Create or modify `policies.json` based on the template in `enterprise/firefox/po
 
 {% tabs %}
 {% tab title="Windows" %}
-#### Windows Deployment
+**Windows Deployment**
 
 **Manual Deployment:**
 
-1. Create the distribution folder if it doesn't exist:
-   ```powershell
-   New-Item -ItemType Directory -Force -Path "$env:ProgramFiles\Mozilla Firefox\distribution"
-   ```
+1.  Create the distribution folder if it doesn't exist:
 
-2. Copy your configured `policies.json`:
-   ```powershell
-   Copy-Item policies.json "$env:ProgramFiles\Mozilla Firefox\distribution\policies.json"
-   ```
+    ```powershell
+    New-Item -ItemType Directory -Force -Path "$env:ProgramFiles\Mozilla Firefox\distribution"
+    ```
+2.  Copy your configured `policies.json`:
 
+    ```powershell
+    Copy-Item policies.json "$env:ProgramFiles\Mozilla Firefox\distribution\policies.json"
+    ```
 3. Restart Firefox on all systems
 
 **Group Policy Deployment:**
@@ -180,25 +185,26 @@ Write-Output "Firefox policies deployed successfully"
 {% endtab %}
 
 {% tab title="macOS" %}
-#### macOS Deployment
+**macOS Deployment**
 
 **Manual Deployment:**
 
-1. Create the distribution folder:
-   ```bash
-   sudo mkdir -p "/Applications/Firefox.app/Contents/Resources/distribution"
-   ```
+1.  Create the distribution folder:
 
-2. Copy your configured `policies.json`:
-   ```bash
-   sudo cp policies.json "/Applications/Firefox.app/Contents/Resources/distribution/policies.json"
-   ```
+    ```bash
+    sudo mkdir -p "/Applications/Firefox.app/Contents/Resources/distribution"
+    ```
+2.  Copy your configured `policies.json`:
 
-3. Set appropriate permissions:
-   ```bash
-   sudo chmod 644 "/Applications/Firefox.app/Contents/Resources/distribution/policies.json"
-   sudo chown root:wheel "/Applications/Firefox.app/Contents/Resources/distribution/policies.json"
-   ```
+    ```bash
+    sudo cp policies.json "/Applications/Firefox.app/Contents/Resources/distribution/policies.json"
+    ```
+3.  Set appropriate permissions:
+
+    ```bash
+    sudo chmod 644 "/Applications/Firefox.app/Contents/Resources/distribution/policies.json"
+    sudo chown root:wheel "/Applications/Firefox.app/Contents/Resources/distribution/policies.json"
+    ```
 
 **MDM Deployment (Jamf, Intune, etc.):**
 
@@ -235,37 +241,39 @@ Some MDM systems support Firefox configuration profiles. Check your MDM document
 {% endtab %}
 
 {% tab title="Linux" %}
-#### Linux Deployment
+**Linux Deployment**
 
 **System-Wide Deployment:**
 
-1. Create the policies directory:
-   ```bash
-   sudo mkdir -p /etc/firefox/policies
-   ```
+1.  Create the policies directory:
 
-2. Copy your configured `policies.json`:
-   ```bash
-   sudo cp policies.json /etc/firefox/policies/policies.json
-   ```
+    ```bash
+    sudo mkdir -p /etc/firefox/policies
+    ```
+2.  Copy your configured `policies.json`:
 
-3. Set proper permissions:
-   ```bash
-   sudo chmod 644 /etc/firefox/policies/policies.json
-   ```
+    ```bash
+    sudo cp policies.json /etc/firefox/policies/policies.json
+    ```
+3.  Set proper permissions:
+
+    ```bash
+    sudo chmod 644 /etc/firefox/policies/policies.json
+    ```
 
 **Distribution-Specific Locations:**
 
 Different Linux distributions may use different paths:
 
-- **Debian/Ubuntu**: `/etc/firefox/policies/policies.json`
-- **RHEL/CentOS/Fedora**: `/usr/lib64/firefox/distribution/policies.json`
-- **SUSE/openSUSE**: `/usr/lib/firefox/distribution/policies.json`
-- **Snap package**: Policies not supported via traditional methods
+* **Debian/Ubuntu**: `/etc/firefox/policies/policies.json`
+* **RHEL/CentOS/Fedora**: `/usr/lib64/firefox/distribution/policies.json`
+* **SUSE/openSUSE**: `/usr/lib/firefox/distribution/policies.json`
+* **Snap package**: Policies not supported via traditional methods
 
 **Automated Deployment:**
 
 Using Ansible:
+
 ```yaml
 - name: Deploy Firefox Check Extension Policy
   copy:
@@ -278,6 +286,7 @@ Using Ansible:
 ```
 
 Using Puppet:
+
 ```puppet
 file { '/etc/firefox/policies':
   ensure => directory,
@@ -365,12 +374,13 @@ Configure a webhook to receive detection events:
 ```
 
 **Available Event Types:**
-- `detection_alert` - General phishing detection events
-- `false_positive_report` - User-submitted false positive reports
-- `page_blocked` - Page blocking events
-- `rogue_app_detected` - OAuth rogue application detection
-- `threat_detected` - General threat detection events
-- `validation_event` - Legitimate page validation events
+
+* `detection_alert` - General phishing detection events
+* `false_positive_report` - User-submitted false positive reports
+* `page_blocked` - Page blocking events
+* `rogue_app_detected` - OAuth rogue application detection
+* `threat_detected` - General threat detection events
+* `validation_event` - Legitimate page validation events
 
 For webhook payload schema and implementation details, see the [Webhook Documentation](../webhooks.md).
 
@@ -438,7 +448,7 @@ To force an immediate update:
 **Common causes:**
 
 1. **Unsigned extension**: Production deployments require signed .xpi
-2. **Unreachable URL**: Verify the install_url is accessible
+2. **Unreachable URL**: Verify the install\_url is accessible
 3. **Network restrictions**: Check firewall/proxy settings
 4. **Firefox version**: Ensure Firefox 109+
 
@@ -493,13 +503,13 @@ Remove the entire policies file (will remove all managed extensions and policies
 
 ## Support Resources
 
-- **Template**: `enterprise/firefox/policies.json`
-- **Schema**: `config/managed_schema.json`
-- **Firefox Policies**: [Mozilla Policy Documentation](https://github.com/mozilla/policy-templates)
-- **General Support**: See [Firefox Support](../firefox-support.md)
+* **Template**: `enterprise/firefox/policies.json`
+* **Schema**: `config/managed_schema.json`
+* **Firefox Policies**: [Mozilla Policy Documentation](https://github.com/mozilla/policy-templates)
+* **General Support**: See [Firefox Support](../firefox-support.md)
 
 ## Additional Resources
 
-- [Firefox Enterprise Support](https://support.mozilla.org/en-US/products/firefox-enterprise)
-- [Firefox Policy Templates](https://github.com/mozilla/policy-templates)
-- [Enterprise Information for IT](https://support.mozilla.org/en-US/kb/enterprise-information-it)
+* [Firefox Enterprise Support](https://support.mozilla.org/en-US/products/firefox-enterprise)
+* [Firefox Policy Templates](https://github.com/mozilla/policy-templates)
+* [Enterprise Information for IT](https://support.mozilla.org/en-US/kb/enterprise-information-it)
