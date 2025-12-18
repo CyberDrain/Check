@@ -32,7 +32,7 @@ Check is completely free, open source, and can be delivered to users completely 
 
 Installing the plugin immediately gives you protection against AITM attacks and takes seconds. Click the install button and you're good to go.
 
-<a href="https://microsoftedge.microsoft.com/addons/detail/check-by-cyberdrain/knepjpocdagponkonnbggpcnhnaikajg" class="button primary">Install for Edge</a> **OR** <a href="https://chromewebstore.google.com/detail/benimdeioplgkhanklclahllklceahbe" class="button primary">Install for Chrome</a> OR <a href="./" class="button secondary">Firefox (Coming Soon!)</a>
+<a href="https://microsoftedge.microsoft.com/addons/detail/check-by-cyberdrain/knepjpocdagponkonnbggpcnhnaikajg" class="button primary">Install for Edge</a> **OR** <a href="https://chromewebstore.google.com/detail/benimdeioplgkhanklclahllklceahbe" class="button primary">Install for Chrome</a> **OR** <a href="./" class="button secondary">Firefox (Coming Soon!)</a>
 
 ## Why was Check created?
 
