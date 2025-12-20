@@ -124,12 +124,6 @@ Edit your `rules/detection-rules.json` file to customize:
 ```
 Note: Page blocking also requires "Enable Page Blocking" to be turned ON in settings.
 
-**Adjust Sensitivity:**
-    "enabled": true
-  }
-}
-```
-
 **Adjust Sensitivity** (how strict the checking is):
 ```json
 {
