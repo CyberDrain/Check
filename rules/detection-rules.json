@@ -11,7 +11,7 @@
     "^https:\\/\\/login\\.live\\.com$"
   ],
   "microsoft_domain_patterns": [
-    "^https:\\/\\/[^.]*\\.microsoft\\.com$",
+    "^https:\\/\\/*\\.microsoft\\.com$",
     "^https:\\/\\/[^.]*\\.microsoftonline\\.com$",
     "^https:\\/\\/[^.]*\\.office\\.com$",
     "^https:\\/\\/[^.]*\\.office365\\.com$",
