@@ -1,4 +1,4 @@
-# ProjectX Agent Guide
+# Check Agent Guide
 
 ## Purpose and Scope
 - Manifest V3 browser extension that detects phishing sites impersonating Microsoft 365 sign-in pages.

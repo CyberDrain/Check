@@ -1,5 +1,5 @@
 {
-  "name": "projectx",
+  "name": "Check",
   "version": "1.0.0",
   "description": "An open-source, Manifest V3 browser extension for detecting phishing attacks that impersonate Microsoft 365 sign-in pages.",
   "main": "index.js",

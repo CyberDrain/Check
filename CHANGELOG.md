@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### d02e0d1 - Merge branch 'main' of https://github.com/CyberDrain/ProjectX
+### d02e0d1 - Merge branch 'main' of https://github.com/CyberDrain/Check
 - Contributor: John Duprey
 - Date: 2025-08-29T14:27:08+02:00
 - Files changed:
@@ -81,7 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - scripts/content.js
 - Fixed error in content script.
 
-### 65b5476 - Merge branch 'main' of https://github.com/CyberDrain/ProjectX
+### 65b5476 - Merge branch 'main' of https://github.com/CyberDrain/Check
 - Contributor: John Duprey
 - Date: 2025-08-29T13:56:03+02:00
 - Files changed:
@@ -110,7 +110,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - CHANGELOG.md
 - Added comprehensive branding asset history to the changelog.
 
-### 35d2d3c - Merge branch 'main' of https://github.com/CyberDrain/ProjectX
+### 35d2d3c - Merge branch 'main' of https://github.com/CyberDrain/Check
 - Contributor: John Duprey
 - Date: 2025-08-29T13:43:39+02:00
 - Files changed:
@@ -176,7 +176,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - test-extension-loading.html
 - Standardized quote style and corrected linting across multiple files (752 insertions, 623 deletions).
 
-### 7efb6a5 - Merge branch 'main' of https://github.com/CyberDrain/ProjectX
+### 7efb6a5 - Merge branch 'main' of https://github.com/CyberDrain/Check
 - Contributor: John Duprey
 - Date: 2025-08-29T13:36:45+02:00
 - Files changed:
@@ -214,7 +214,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - test-extension-loading.html
 - Renamed legacy references to Check across code and documentation.
 
-### d94508e - Merge branch 'main' of https://github.com/CyberDrain/ProjectX
+### d94508e - Merge branch 'main' of https://github.com/CyberDrain/Check
 - Contributor: rvdwegen
 - Date: 2025-08-29T13:33:21+02:00
 - Files changed:
@@ -243,7 +243,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - CHANGELOG.md
 - Expanded changelog with per-commit details.
 
-### 4225354 - Merge branch 'main' of https://github.com/CyberDrain/ProjectX
+### 4225354 - Merge branch 'main' of https://github.com/CyberDrain/Check
 - Contributor: rvdwegen
 - Date: 2025-08-29T13:30:11+02:00
 - Files changed:
@@ -413,7 +413,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - docs/USER_GUIDE.md
 - Updated guides to align with repository structure.
 
-### 632a6df - Merge branch 'main' of https://github.com/CyberDrain/ProjectX
+### 632a6df - Merge branch 'main' of https://github.com/CyberDrain/Check
 - Contributor: John Duprey
 - Date: 2025-08-29T12:47:15+02:00
 - Files changed:
@@ -433,7 +433,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - rules/detection-rules.json
 - Revised detection rules JSON definitions.
 
-### 2502595 - Merge branch 'main' of https://github.com/CyberDrain/ProjectX
+### 2502595 - Merge branch 'main' of https://github.com/CyberDrain/Check
 - Contributor: rvdwegen
 - Date: 2025-08-29T12:43:14+02:00
 - Files changed:
@@ -536,5 +536,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - styles/content.css
 - Initial project scaffold with documentation, configuration, and detection rules.
 
-[Unreleased]: https://github.com/CyberDrain/ProjectX/compare/0.1.0...HEAD
-[0.1.0]: https://github.com/CyberDrain/ProjectX/releases/tag/0.1.0
+[Unreleased]: https://github.com/CyberDrain/Check/compare/0.1.0...HEAD
+[0.1.0]: https://github.com/CyberDrain/Check/releases/tag/0.1.0
