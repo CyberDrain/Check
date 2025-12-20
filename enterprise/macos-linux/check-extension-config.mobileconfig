@@ -49,7 +49,7 @@
                 <key>customRulesUrl</key>
                 <dict>
                     <key>Value</key>
-                    <string>https://raw.githubusercontent.com/CyberDrain/ProjectX/refs/heads/main/rules/detection-rules.json</string>
+                    <string>https://raw.githubusercontent.com/CyberDrain/Check/refs/heads/main/rules/detection-rules.json</string>
                 </dict>
                 <key>updateInterval</key>
                 <dict>

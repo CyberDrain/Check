@@ -112,7 +112,7 @@ install_preferences() {
     log_info "Installing extension preferences..."
 
     # Chrome preferences
-    create_extension_preferences "$CHROME_PLIST_PATH" "Chrome" "https://raw.githubusercontent.com/CyberDrain/ProjectX/refs/heads/main/rules/detection-rules.json"
+    create_extension_preferences "$CHROME_PLIST_PATH" "Chrome" "https://raw.githubusercontent.com/CyberDrain/Check/refs/heads/main/rules/detection-rules.json"
 
     # Edge preferences
     create_extension_preferences "$EDGE_PLIST_PATH" "Edge" ""
