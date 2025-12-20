@@ -160,6 +160,76 @@
           "default": ""
         }
       }
+    },
+    "domainSquatting": {
+      "title": "Domain Squatting Detection",
+      "description": "Configuration for domain squatting detection to protect against typosquatting, homoglyphs, and combosquatting attacks. Enable/disable is controlled by the detection rules JSON. Domains are automatically extracted from the URL allowlist.",
+      "type": "object",
+      "properties": {
+        "deviationThreshold": {
+          "title": "Deviation Threshold",
+          "description": "Maximum number of character differences (Levenshtein distance) to trigger detection. Lower values are stricter.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "default": 2
+        },
+        "algorithms": {
+          "title": "Detection Algorithms",
+          "description": "Enable or disable specific detection algorithms",
+          "type": "object",
+          "properties": {
+            "levenshtein": {
+              "title": "Levenshtein Distance",
+              "description": "Detect domains with small character differences",
+              "type": "boolean",
+              "default": true
+            },
+            "homoglyph": {
+              "title": "Homoglyph Detection",
+              "description": "Detect confusable characters (e.g., 'a' vs 'а')",
+              "type": "boolean",
+              "default": true
+            },
+            "typosquat": {
+              "title": "Typosquatting Detection",
+              "description": "Detect common typing mistakes and character swaps",
+              "type": "boolean",
+              "default": true
+            },
+            "combosquat": {
+              "title": "Combosquatting Detection",
+              "description": "Detect domains with added prefixes/suffixes",
+              "type": "boolean",
+              "default": true
+            }
+          }
+        },
+        "protectedDomains": {
+          "title": "Additional Protected Domains",
+          "description": "OPTIONAL: Additional domains to protect beyond those automatically extracted from the URL allowlist. Normally you should just add domains to the URL allowlist instead.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "title": "Domain",
+            "description": "Domain name to protect (e.g., 'company.com')"
+          },
+          "default": []
+        },
+        "Action": {
+          "title": "Action",
+          "description": "Action to take when domain squatting is detected",
+          "type": "string",
+          "enum": ["block", "warn", "log"],
+          "default": "block"
+        },
+        "logDetections": {
+          "title": "Log Detections",
+          "description": "Log all domain squatting detections to activity log",
+          "type": "boolean",
+          "default": true
+        }
+      }
     }
   }
 }

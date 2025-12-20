@@ -41,6 +41,14 @@ MSPs and IT departments commonly need to exclude phishing training platforms (li
 
 Add URLs or patterns that should be excluded from phishing detection. This is useful for internal company sites or trusted third-party services that might trigger false positives.
 
+**Dual Protection:** Your allowlist serves two purposes:
+1. **Prevents false positives** - Sites you add won't be flagged as phishing
+2. **Domain squatting protection** - Domains extracted from your allowlist are automatically protected against typosquatting and look-alike attacks
+
+For example, adding `https://yourcompany.com/*` will both allow that site AND protect against fake domains like `yourcompany.net`, `your-company.com`, or `y0urcompany.com`.
+
+Learn more about [Domain Squatting Detection](../features/domain-squatting-detection.md).
+
 **How it works:** Your allowlist patterns are **added to** (not replacing) the default CyberDrain exclusions, providing additional protection without losing baseline coverage.
 
 You can use:

@@ -1,0 +1,161 @@
+[M365-Protection] 📊 POPUP REQUEST: Using fallback detection - unknown
+content.js:88 [M365-Protection] 🔄 POPUP REQUEST: Re-triggering analysis (forced)
+content.js:88 [M365-Protection] 🔄 FORCED RE-SCAN: User manually triggered re-scan from popup
+content.js:88 [M365-Protection] 🚀 Starting protection analysis (re-run) for https://sass.fraigutra.ai.in/a6dp3btdlbucn?4cb80078830f9112a-b9830f36eb056ff3b8ac1fcddfe67/
+content.js:88 [M365-Protection] 📄 Page info: 724 elements, 553666 chars content
+content.js:88 [M365-Protection] Page blocking disabled in settings - running analysis only (no protective action)
+content.js:88 [M365-Protection] 🔄 Forced re-scan initiated (scan count: 3)
+content.js:88 [M365-Protection] Starting rule-driven Microsoft 365 protection (scan #3), protection DISABLED
+content.js:88 [M365-Protection] Console capture enabled (developer mode active)
+content.js:88 [M365-Protection] Checking origin: "https://sass.fraigutra.ai.in"
+content.js:88 [M365-Protection] Trusted login patterns: Array(7)
+content.js:88 [M365-Protection] Microsoft domain patterns: Array(24)
+content.js:88 [M365-Protection] Is trusted login domain: false
+content.js:88 [M365-Protection] Is Microsoft domain: false
+content.js:88 [M365-Protection] ❌ NON-TRUSTED ORIGIN - Continuing analysis
+content.js:88 [M365-Protection] Origin "https://sass.fraigutra.ai.in" not in trusted login patterns
+content.js:88 [M365-Protection] Expected to match pattern like: "^https://login\.microsoftonline\.com$"
+content.js:88 [M365-Protection] Trusted login patterns loaded: YES
+content.js:88 [M365-Protection] Analyzing domain "sass.fraigutra.ai.in" - proceeding with content-based detection
+content.js:88 [M365-Protection] ✗ Missing primary element: idPartnerPL
+content.js:88 [M365-Protection] ✗ Missing primary element: loginfmt
+content.js:88 [M365-Protection] ✗ Missing primary element: aadcdn_msauth
+content.js:88 [M365-Protection] ✗ Missing primary element: urlMsaSignUp
+content.js:88 [M365-Protection] ✗ Missing primary element: i0116_element
+content.js:88 [M365-Protection] ✗ Missing primary element: aadcdn_background_image
+content.js:88 [M365-Protection] ✗ Missing secondary element: page_title_microsoft
+content.js:88 [M365-Protection] ✗ Missing secondary element: meta_description_microsoft
+content.js:88 [M365-Protection] ✗ Missing secondary element: meta_og_title_microsoft
+content.js:88 [M365-Protection] ✗ Missing secondary element: favicon_microsoft
+content.js:88 [M365-Protection] ✓ Found secondary element: ms_form_dimensions (weight: 0.5)
+content.js:88 [M365-Protection] ✓ Found secondary element: ms_button_colors (weight: 1.5)
+content.js:88 [M365-Protection] ✗ Missing secondary element: segoe_ui_font
+content.js:88 [M365-Protection] ✓ Found secondary element: ms_container_layout (weight: 0.5)
+content.js:88 [M365-Protection] ✗ Missing secondary element: ms_external_css
+content.js:88 [M365-Protection] ✓ Found secondary element: password_input_field (weight: 0.5)
+content.js:88 [M365-Protection] ✓ Found secondary element: login_form_element (weight: 0.5)
+content.js:88 [M365-Protection] ✓ Found secondary element: ms_login_placeholder_text (weight: 1)
+content.js:88 [M365-Protection] 🔍 High-confidence Microsoft elements detected (Weight: 4.5, Elements: 6) - will check phishing indicators
+content.js:88 [M365-Protection] ⚠️ Microsoft elements detected but not full login page - checking for phishing indicators
+content.js:88 [M365-Protection] 🔍 processPhishingIndicators: detectionRules available: true
+content.js:88 [M365-Protection] 🔍 Testing 27 phishing indicators against:
+content.js:88 [M365-Protection]    - Page source length: 718647 chars
+content.js:88 [M365-Protection]    - Page text length: 553666 chars
+content.js:88 [M365-Protection]    - Current URL: https://sass.fraigutra.ai.in/a6dp3btdlbucn?4cb80078830f9112a-b9830f36eb056ff3b8ac1fcddfe67/
+content.js:88 [M365-Protection]    - Injected elements excluded: 0
+content.js:88 [M365-Protection] 📋 All 27 indicators loaded:
+content.js:88 [M365-Protection]    1. phi_001: (?:secure-?(?:microsoft|office|365|outlook)) (high)
+content.js:88 [M365-Protection]    2. phi_031_suspicious_query_length_combined: [code-driven: unknown] (medium)
+content.js:88 [M365-Protection]    3. phi_033_suspicious_event_listeners: [code-driven: pattern_count] (high)
+content.js:88 [M365-Protection]    4. phi_004: [code-driven: all_of] (medium)
+content.js:88 [M365-Protection]    5. phi_005: data:text/html.*(?:microsoft|office|365|outlook).*... (critical)
+content.js:88 [M365-Protection]    6. phi_007: \*customcss.*(?!aadcdn\.msftauthimages\.net) (high)
+content.js:88 [M365-Protection]    7. phi_012_suspicious_resources: [code-driven: resource_from_domain] (high)
+content.js:88 [M365-Protection]    8. phi_006: [code-driven: all_of] (high)
+content.js:88 [M365-Protection]    9. phi_010_aad_fingerprint: [code-driven: all_of] (critical)
+content.js:88 [M365-Protection]    10. phi_011_missing_elements: (?:microsoft|office|365).{0,2000}(?:type=["']passw... (high)
+content.js:88 [M365-Protection]    11. phi_013_form_action_mismatch: [code-driven: all_of] (critical)
+content.js:88 [M365-Protection]    12. phi_014_devtools_blocking: [code-driven: all_of] (high)
+content.js:88 [M365-Protection]    13. phi_015_code_obfuscation: [code-driven: all_of] (high)
+content.js:88 [M365-Protection]    14. phi_008: content-security-policy-report-only.*(?!.*msauth\.... (critical)
+content.js:88 [M365-Protection]    15. phi_019_malicious_obfuscation: (?:(?:var|let|const)\s+\w+\s*=\s*(?:atob|unescape)... (critical)
+content.js:88 [M365-Protection]    16. phi_001_enhanced: [code-driven: has_but_not] (critical)
+content.js:88 [M365-Protection]    17. phi_002: [code-driven: all_of] (high)
+content.js:88 [M365-Protection]    18. phi_003: [code-driven: all_of] (high)
+content.js:88 [M365-Protection]    19. phi_020_grammar_typos: [code-driven: substring_count] (medium)
+content.js:88 [M365-Protection]    20. phi_021_suspicious_url_structure: (?<=://[^/]+)(?:/[a-zA-Z0-9]{20,}(?:/[a-zA-Z0-9]{8... (medium)
+content.js:88 [M365-Protection]    21. phi_022_obfuscated_script_names: (?:src=["'][^"']*[a-zA-Z0-9]{12,20}\.js["']|[a-zA-... (medium)
+content.js:88 [M365-Protection]    22. phi_017_microsoft_brand_abuse: [code-driven: all_of] (high)
+content.js:88 [M365-Protection]    23. phi_023_css_selection_blocking: [code-driven: substring_present] (low)
+content.js:88 [M365-Protection]    24. phi_024_randomized_css_classes: class\s*=\s*["'][a-z]+_[a-z]+_\d{3}["'] (medium)
+content.js:88 [M365-Protection]    25. phi_025_honeypot_fields: (?:position\s*:\s*absolute\s*!important\s*;[^}]*le... (low)
+content.js:88 [M365-Protection]    26. phi_029_fake_dead_links: [code-driven: pattern_count] (medium)
+content.js:88 [M365-Protection]    27. phi_030_empty_tag_obfuscation: [code-driven: pattern_count] (medium)
+content.js:88 [M365-Protection] ⏱️ PERF: Attempting background processing with Web Worker
+content.js:88 [M365-Protection] ⏱️ PERF: Background processing 0/27 - phi_001
+content.js:88 [M365-Protection] ⏱️ PERF: Background processing 3/27 - phi_004
+content.js:88 [M365-Protection] ⏱️ PERF: Background processing 6/27 - phi_012_suspicious_resources
+content.js:88 [M365-Protection] ⏱️ PERF: Background processing 9/27 - phi_011_missing_elements
+content.js:88 [M365-Protection] ⏱️ PERF: Background processing 12/27 - phi_015_code_obfuscation
+content.js:88 [M365-Protection] ⏱️ PERF: Background processing 15/27 - phi_001_enhanced
+content.js:88 [M365-Protection] ⏱️ PERF: Background processing 18/27 - phi_020_grammar_typos
+content.js:88 [M365-Protection] ⏱️ PERF: Background processing 21/27 - phi_017_microsoft_brand_abuse
+content.js:88 [M365-Protection] ⏱️ PERF: Background processing 24/27 - phi_025_honeypot_fields
+content.js:88 [M365-Protection] ⏱️ PERF: Background processing completed successfully in 568ms
+content.js:88 [M365-Protection] ⏱️ Phishing indicators check (Web Worker): 18 threats found, score: 233, processing time: 568ms
+content.js:88  [M365-Protection] 🚨 PHISHING INDICATORS FOUND on non-Microsoft page: 18 threats
+(anonymous) @ content.js:88
+content.js:88 [M365-Protection] 📋 Detailed threat breakdown:
+content.js:88 [M365-Protection]    1. [MEDIUM] phi_031_suspicious_query_length_combined (confidence: 0.7)
+content.js:88 [M365-Protection]       Suspiciously long query parameter value in URL, Microsoft branding, and password field or form present (possible phishing)
+content.js:88 [M365-Protection]       Matched in: page source
+content.js:88 [M365-Protection]    2. [HIGH] phi_033_suspicious_event_listeners (confidence: 0.9)
+content.js:88 [M365-Protection]       Form with submit listeners that modify action attribute
+content.js:88 [M365-Protection]       Matched in: page source
+content.js:88 [M365-Protection]    3. [MEDIUM] phi_004 (confidence: 0.65)
+content.js:88 [M365-Protection]       Urgency tactics targeting Microsoft users
+content.js:88 [M365-Protection]       Matched in: page source
+content.js:88 [M365-Protection]    4. [HIGH] phi_012_suspicious_resources (confidence: 0.9)
+content.js:88 [M365-Protection]       Custom CSS loaded from unauthorized domain
+content.js:88 [M365-Protection]       Matched in: page source
+content.js:88 [M365-Protection]    5. [HIGH] phi_006 (confidence: 0.8)
+content.js:88 [M365-Protection]       Microsoft-branded login form not posting to Microsoft domain
+content.js:88 [M365-Protection]       Matched in: page source
+content.js:88 [M365-Protection]    6. [CRITICAL] phi_010_aad_fingerprint (confidence: 0.98)
+content.js:88 [M365-Protection]       AAD-like login interface on non-Microsoft domain
+content.js:88 [M365-Protection]       Matched in: page source
+content.js:88 [M365-Protection]    7. [HIGH] phi_011_missing_elements (confidence: 0.85)
+content.js:88 [M365-Protection]       Microsoft branding without required authentication elements
+content.js:88 [M365-Protection]       Matched in: page source
+content.js:88 [M365-Protection]    8. [CRITICAL] phi_013_form_action_mismatch (confidence: 0.95)
+content.js:88 [M365-Protection]       Microsoft-branded password form with non-Microsoft action
+content.js:88 [M365-Protection]       Matched in: page source
+content.js:88 [M365-Protection]    9. [HIGH] phi_014_devtools_blocking (confidence: 0.9)
+content.js:88 [M365-Protection]       Page attempts to block or detect developer tools usage
+content.js:88 [M365-Protection]       Matched in: page source
+content.js:88 [M365-Protection]    10. [HIGH] phi_015_code_obfuscation (confidence: 0.85)
+content.js:88 [M365-Protection]       Page contains suspicious JavaScript obfuscation patterns commonly used in malware
+content.js:88 [M365-Protection]       Matched in: page source
+content.js:88 [M365-Protection]    11. [CRITICAL] phi_001_enhanced (confidence: 0.95)
+content.js:88 [M365-Protection]       Enhanced detection of domains mimicking Microsoft services with security/login keywords (excludes legitimate SSO)
+content.js:88 [M365-Protection]       Matched in: page source
+content.js:88 [M365-Protection]    12. [HIGH] phi_002 (confidence: 0.85)
+content.js:88 [M365-Protection]       Impersonation of Microsoft security team (excludes legitimate SSO and third-party auth)
+content.js:88 [M365-Protection]       Matched in: page source
+content.js:88 [M365-Protection]    13. [HIGH] phi_003 (confidence: 0.85)
+content.js:88 [M365-Protection]       Common Microsoft 365 phishing keywords and variations
+content.js:88 [M365-Protection]       Matched in: page source
+content.js:88 [M365-Protection]    14. [MEDIUM] phi_020_grammar_typos (confidence: 0.7)
+content.js:88 [M365-Protection]       Multiple grammar/spelling errors indicative of phishing
+content.js:88 [M365-Protection]       Matched in: page source
+content.js:88 [M365-Protection]    15. [HIGH] phi_017_microsoft_brand_abuse (confidence: 0.95)
+content.js:88 [M365-Protection]       Microsoft branding combined with authentication terms on non-Microsoft domain
+content.js:88 [M365-Protection]       Matched in: page source
+content.js:88 [M365-Protection]    16. [LOW] phi_023_css_selection_blocking (confidence: 0.85)
+content.js:88 [M365-Protection]       CSS prevents text selection - anti-analysis technique (supporting evidence - should not block alone)
+content.js:88 [M365-Protection]       Matched in: page source
+content.js:88 [M365-Protection]    17. [MEDIUM] phi_029_fake_dead_links (confidence: 0.95)
+content.js:88 [M365-Protection]       Obfuscated links with empty tags - phishing technique (supporting evidence - should not block alone)
+content.js:88 [M365-Protection]       Matched in: page source
+content.js:88 [M365-Protection]    18. [MEDIUM] phi_030_empty_tag_obfuscation (confidence: 0.9)
+content.js:88 [M365-Protection]       Multiple empty tags used to obfuscate text (supporting evidence - should not block alone)
+content.js:88 [M365-Protection]       Matched in: page source
+content.js:88  [M365-Protection] ⚠️ PROTECTION DISABLED: Would block critical threats but showing warning banner instead
+(anonymous) @ content.js:88
+content.js:88 [M365-Protection] Registered injected element: DIV#ms365-warning-banner
+content.js:88 [M365-Protection] Registered injected element: DIV#no-id
+content.js:88 [M365-Protection] Registered injected element: DIV#check-banner-left
+content.js:88 [M365-Protection] Registered injected element: DIV#no-id
+content.js:88 [M365-Protection] Registered injected element: SPAN#no-id
+content.js:88 [M365-Protection] Registered injected element: STRONG#no-id
+content.js:88 [M365-Protection] Registered injected element: SMALL#no-id
+content.js:88 [M365-Protection] Registered injected element: BUTTON#no-id
+content.js:88 [M365-Protection] Warning banner displayed and all elements registered for exclusion
+content.js:88 [M365-Protection] Registered injected element: DIV#check-banner-branding
+content.js:88 [M365-Protection] Registered injected element: IMG#no-id
+content.js:88 [M365-Protection] Registered injected element: DIV#no-id
+content.js:88 [M365-Protection] Registered injected element: SPAN#no-id
+content.js:88 [M365-Protection] CIPP reporting disabled or no server URL configured
+content.js:88 [M365-Protection] 📊 POPUP REQUEST: Returning stored detection results - blocked
+content.js:88 [M365-Protection] DOM monitoring stopped
+content.js:88 [M365-Protection] 🛑 DOM monitoring timeout reached - stopping

@@ -25,7 +25,8 @@ function parseUrlParams() {
 
   if (detailsParam) {
     try {
-      const details = JSON.parse(decodeURIComponent(detailsParam));
+      // URLSearchParams.get() already decodes the URI component, so don't decode again
+      const details = JSON.parse(detailsParam);
       console.log("Parsed details:", details);
       
       // Store details globally for false positive reporting
@@ -50,8 +51,15 @@ function parseUrlParams() {
         document.getElementById("blockReason").textContent = details.reason;
       }
 
-      // Update threat category based on rule description or score
-      if (details.ruleDescription) {
+      // Update threat category based on type or rule description
+      if (details.type === "domain_squatting") {
+        document.getElementById("threatCategory").textContent = "Domain Squatting";
+        // Custom messaging for domain squatting
+        if (details.protectedDomain) {
+          document.getElementById("blockReason").textContent = 
+            `This website's domain closely resembles "${details.protectedDomain}" but is NOT the legitimate site. Entering your credentials here could compromise your account.`;
+        }
+      } else if (details.ruleDescription) {
         document.getElementById("threatCategory").textContent =
           details.ruleDescription;
       } else if (details.rule) {
@@ -756,8 +764,53 @@ function populateTechnicalDetails(details) {
   console.log("Details.threats:", details.threats);
   console.log("Details.phishingIndicators:", details.phishingIndicators);
   console.log("Details.foundIndicators:", details.foundIndicators);
+  console.log("Details.type:", details.type);
 
-  // Detection Scores
+  // Handle domain squatting specific details
+  if (details.type === "domain_squatting") {
+    console.log("Populating domain squatting details");
+    
+    // Detection Scores - use confidence for domain squatting
+    if (details.confidence !== undefined) {
+      document.getElementById("techScore").textContent = `${Math.round(details.confidence * 100)}%`;
+    }
+    document.getElementById("techThreshold").textContent = "Domain Similarity";
+    
+    // Threat Analysis - use techniques
+    let indicatorCount = 0;
+    if (details.techniques && Array.isArray(details.techniques)) {
+      indicatorCount = details.techniques.length;
+      document.getElementById("techIndicatorCount").textContent = indicatorCount;
+      
+      // Set severity
+      const severityElement = document.getElementById("techSeverity");
+      const severityMap = { critical: "CRITICAL", high: "HIGH", medium: "MEDIUM", low: "LOW" };
+      const severityText = severityMap[details.severity] || details.severity.toUpperCase();
+      severityElement.innerHTML = `<span class="tech-badge ${details.severity}">${severityText}</span>`;
+      
+      // Populate techniques as indicators
+      populatePhishingIndicatorsList(details.techniques, details);
+    }
+    
+    // Detection method
+    document.getElementById("techDetectionMethod").textContent = "Domain Squatting Detection";
+    
+    // Page Information
+    if (details.testDomain) {
+      document.getElementById("techPageTitle").textContent = `Suspicious Domain: ${details.testDomain}`;
+    }
+    if (details.protectedDomain) {
+      const userAgent = document.getElementById("techUserAgent");
+      userAgent.textContent = `Impersonating: ${details.protectedDomain}`;
+    }
+    document.getElementById("techTimestamp").textContent = details.detectionTime 
+      ? new Date(details.detectionTime).toLocaleString() 
+      : new Date().toLocaleString();
+    
+    return; // Exit early for domain squatting
+  }
+
+  // Detection Scores for phishing detection
   if (details.score !== undefined) {
     document.getElementById("techScore").textContent = details.score;
   }
@@ -765,7 +818,7 @@ function populateTechnicalDetails(details) {
     document.getElementById("techThreshold").textContent = details.threshold;
   }
 
-  // Threat Analysis - Use multiple data sources
+  // Threat Analysis - Use multiple data sources for phishing
   let phishingIndicators = [];
   let indicatorCount = 0;
 
@@ -889,6 +942,7 @@ function populateTechnicalDetails(details) {
 function populatePhishingIndicatorsList(indicators, details) {
   console.log("=== POPULATING PHISHING INDICATORS LIST ===");
   console.log("Indicators to display:", indicators);
+  console.log("Details type:", details.type);
 
   const container = document.getElementById("techPhishingIndicators");
 
@@ -919,7 +973,27 @@ function populatePhishingIndicatorsList(indicators, details) {
     return;
   }
 
-  // Create formatted list of indicators
+  // Handle domain squatting techniques differently
+  if (details.type === "domain_squatting") {
+    console.log("Displaying domain squatting techniques");
+    const techniquesHTML = indicators
+      .map((technique) => {
+        const techniqueName = technique.technique || technique.id || "Unknown Technique";
+        const description = technique.description || "Domain similarity detected";
+        
+        return `<div style="margin-bottom: 8px; padding: 6px; background: #fef3c7; border-radius: 4px; border-left: 3px solid #f59e0b;">
+        <strong>${techniqueName}</strong><br>
+        <span style="color: #6b7280; font-size: 11px;">${description}</span>
+      </div>`;
+      })
+      .join("");
+    
+    container.innerHTML = techniquesHTML;
+    console.log("Populated domain squatting techniques with", indicators.length, "techniques");
+    return;
+  }
+
+  // Create formatted list of indicators for phishing
   const indicatorHTML = indicators
     .map((indicator) => {
       const id = indicator.id || indicator.type || "Unknown";

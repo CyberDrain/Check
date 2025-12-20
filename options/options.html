@@ -170,6 +170,11 @@
                                     Rogue App Detected
                                 </label>
                                 <label class="setting-label">
+                                    <input type="checkbox" id="webhookEvent_domain_squatting_detected" class="setting-checkbox">
+                                    <span class="checkbox-custom"></span>
+                                    Domain Squatting Detected
+                                </label>
+                                <label class="setting-label">
                                     <input type="checkbox" id="webhookEvent_threat_detected" class="setting-checkbox">
                                     <span class="checkbox-custom"></span>
                                     Threat Detected
@@ -242,8 +247,8 @@
                             <label class="setting-label">
                                 URL Allowlist (Regex or URL with wildcards)
                                 <textarea id="urlAllowlist" class="setting-textarea" rows="6" placeholder="Enter URLs or regex patterns, one per line:&#10;&#10;Simple URLs with wildcards:&#10;https://google.com/*&#10;https://*.microsoft.com/*&#10;&#10;Advanced regex patterns:&#10;^https://trusted\.example\.com/.*"></textarea>
-                            </label>
-                            <p class="setting-description">Add URLs or regex patterns to allowlist from detection. Use simple URLs with * wildcards (e.g., https://google.com/*) or advanced regex patterns. These will be added to the exclusion rules without replacing the entire ruleset.</p>
+            </label>
+                            <p class="setting-description">Add URLs or regex patterns to allowlist from detection. Use simple URLs with * wildcards (e.g., https://google.com/*) or advanced regex patterns. These will be added to the exclusion rules without replacing the entire ruleset. <strong>This allowlist also protects the extracted domains from typosquatting, homoglyphs, and other domain squatting attacks.</strong></p>
                         </div>
 
                         <div class="setting-item">
@@ -260,10 +265,16 @@
                     <div class="setting-group">
                         <div class="config-header">
                             <h3>Configuration Overview</h3>
-                            <button class="btn btn-secondary small" id="toggleConfigView">
-                                <span class="material-icons">code</span>
-                                Show Raw JSON
-                            </button>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn btn-secondary small" id="expandCollapseAll">
+                                    <span class="material-icons">unfold_more</span>
+                                    Expand All
+                                </button>
+                                <button class="btn btn-secondary small" id="toggleConfigView">
+                                    <span class="material-icons">code</span>
+                                    Show Raw JSON
+                                </button>
+                            </div>
                         </div>
                         <div id="configDisplay" class="config-display">
                             <div class="config-loading">Loading configuration...</div>
@@ -566,35 +577,5 @@
 
     <script src="../scripts/browser-polyfill-inline.js"></script>
     <script src="options.js"></script>
-    <script>
-    // Minimal config summary: just show code-driven indicator count and key settings
-    function renderConfigSummary(config) {
-        const codeDrivenDiv = document.getElementById('codeDrivenIndicators');
-        const keySettingsUl = document.getElementById('configKeySettings');
-        if (!config || !config.phishing_indicators) return;
-        // Show only code-driven indicator count
-        const codeDrivenCount = config.phishing_indicators.filter(r => r.code_driven).length;
-        codeDrivenDiv.innerHTML = `<div class="config-item"><strong>Code-Driven Indicators:</strong> <span class="config-value">${codeDrivenCount}</span></div>`;
-        // Show some key settings
-        keySettingsUl.innerHTML = '';
-        if (config.version) keySettingsUl.innerHTML += `<li><strong>Rules Version:</strong> ${config.version}</li>`;
-        if (config.lastUpdated) keySettingsUl.innerHTML += `<li><strong>Last Updated:</strong> ${config.lastUpdated}</li>`;
-        if (config.detection_settings && config.detection_settings.block_threshold !== undefined) {
-            keySettingsUl.innerHTML += `<li><strong>Block Threshold:</strong> ${config.detection_settings.block_threshold}</li>`;
-        }
-        if (config.detection_settings && config.detection_settings.warn_threshold !== undefined) {
-            keySettingsUl.innerHTML += `<li><strong>Warn Threshold:</strong> ${config.detection_settings.warn_threshold}</li>`;
-        }
-    }
-    // Patch into config loading logic
-    (function() {
-        const origShowConfig = window.showConfigDisplay;
-        window.showConfigDisplay = function(config) {
-            if (typeof origShowConfig === 'function') origShowConfig(config);
-            renderConfigSummary(config);
-            document.getElementById('configSummary').style.display = '';
-        };
-    })();
-    </script>
 </body>
 </html>
