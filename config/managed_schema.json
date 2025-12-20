@@ -216,7 +216,7 @@
           },
           "default": []
         },
-        "Action": {
+        "action": {
           "title": "Action",
           "description": "Action to take when domain squatting is detected",
           "type": "string",
