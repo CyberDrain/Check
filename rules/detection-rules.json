@@ -31,7 +31,7 @@
     "^https:\\/\\/([a-zA-Z0-9-]+\\.)*microsoftonline-p\\.com$",
     "^https:\\/\\/([a-zA-Z0-9-]+\\.)*microsoftazuread-sso\\.com$",
     "^https:\\/\\/([a-zA-Z0-9-]+\\.)*azureedge\\.net$",
-    "^https:\\/\\/([a-zA-Z0-9-]+\\.)*bing\\.com$",
+    "^https:\\/\\/(([a-zA-Z0-9-]+\\.)+)?bing\\.com$",
     "^https:\\/\\/github\\.com$",
     "^https:\\/\\/([a-zA-Z0-9-]+\\.)*cloud\\.microsoft$",
     "^https:\\/\\/([a-zA-Z0-9-]+\\.)*powerbi\\.com$",
