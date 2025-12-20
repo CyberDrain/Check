@@ -113,8 +113,8 @@ export class DomainSquattingDetector {
           // Remove regex patterns like (.*)?
           domain = domain.replace(/\(.*?\)/g, '');
           
-          // Remove trailing dots or special chars
-          domain = domain.replace(/[^\w\-\.]/g, '').replace(/\.$/, '');
+          // Remove trailing dots or special chars, only allow valid domain characters
+          domain = domain.replace(/[^a-zA-Z0-9\-\.]/g, '').replace(/\.$/, '');
           
           // Validate it looks like a domain
           if (domain && domain.includes('.') && domain.length > 3) {
