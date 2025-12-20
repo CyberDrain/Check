@@ -34,8 +34,7 @@
     "^https:\\/\\/(([a-zA-Z0-9-]+\\.)+)?bing\\.com$",
     "^https:\\/\\/github\\.com$",
     "^https:\\/\\/([a-zA-Z0-9-]+\\.)*cloud\\.microsoft$",
-    "^https:\\/\\/([a-zA-Z0-9-]+\\.)*powerbi\\.com$",
-    "^https:\\/\\/([a-zA-Z0-9-]+\\.)*ciamlogin\\.com$"
+    "^https:\\/\\/([a-zA-Z0-9-]+\\.)*powerbi\\.com$"
   ],
   "exclusion_system": {
     "description": "Centralized exclusion system to prevent false positives on legitimate sites (Microsoft partners, SSO providers, major platforms)",
