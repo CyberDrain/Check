@@ -3,6 +3,10 @@
 - [About](README.md)
 - [Firefox Support](firefox-support.md)
 
+## Features
+
+- [Domain Squatting Detection](features/domain-squatting-detection.md)
+
 ## Deployment
 
 - [Chrome/Edge Deployment Instructions](deployment/chrome-edge-deployment-instructions/README.md)

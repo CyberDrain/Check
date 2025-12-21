@@ -11,6 +11,7 @@ import { ConfigManager } from "./modules/config-manager.js";
 import { PolicyManager } from "./modules/policy-manager.js";
 import { DetectionRulesManager } from "./modules/detection-rules-manager.js";
 import { WebhookManager } from "./modules/webhook-manager.js";
+import { DomainSquattingDetector } from "./modules/domain-squatting-detector.js";
 import logger from "./utils/logger.js";
 import { store as storeLog } from "./utils/background-logger.js";
 
@@ -290,6 +291,7 @@ class CheckBackground {
     this.policyManager = new PolicyManager();
     this.detectionRulesManager = new DetectionRulesManager();
     this.rogueAppsManager = new RogueAppsManager();
+    this.domainSquattingDetector = new DomainSquattingDetector();
     this.webhookManager = new WebhookManager(this.configManager);
     this.isInitialized = false;
     this.initializationPromise = null;
@@ -398,6 +400,15 @@ class CheckBackground {
 
       // Initialize detection rules manager
       await this.detectionRulesManager.initialize();
+      
+      // Initialize domain squatting detector with rules and URL allowlist
+      const detectionRules = this.detectionRulesManager.cachedRules;
+      if (detectionRules) {
+        const config = await this.configManager.getConfig();
+        const urlAllowlist = config?.urlAllowlist || [];
+        await this.domainSquattingDetector.initialize(detectionRules, urlAllowlist);
+        logger.log("Domain squatting detector initialized");
+      }
 
       await this.refreshPolicy();
 
@@ -1411,11 +1422,41 @@ class CheckBackground {
               rules,
               message: "Detection rules updated",
             });
+            
+            // Also update domain squatting detector with new rules and URL allowlist
+            const updatedRules = await this.detectionRulesManager.getDetectionRules();
+            if (updatedRules && this.domainSquattingDetector) {
+              const config = await this.configManager.getConfig();
+              const urlAllowlist = config?.urlAllowlist || [];
+              await this.domainSquattingDetector.initialize(updatedRules, urlAllowlist);
+              logger.log("Domain squatting detector updated with new rules");
+            }
           } catch (error) {
             logger.error(
               "Check: Failed to force update detection rules:",
               error
             );
+            sendResponse({ success: false, error: error.message });
+          }
+          break;
+        
+        case "check_domain_squatting":
+          try {
+            const { domain } = message;
+            if (!domain) {
+              sendResponse({ success: false, error: "Domain parameter required" });
+              break;
+            }
+            
+            const result = this.domainSquattingDetector.checkDomain(domain);
+            // Include the action from rules configuration
+            if (result && result.detected) {
+              const rules = await this.detectionRulesManager.getDetectionRules();
+              result.action = rules?.domain_squatting?.action || 'block';
+            }
+            sendResponse({ success: true, result });
+          } catch (error) {
+            logger.error("Check: Failed to check domain squatting:", error);
             sendResponse({ success: false, error: error.message });
           }
           break;
@@ -1439,6 +1480,15 @@ class CheckBackground {
             const newBadgeEnabled =
               updatedConfig?.enableValidPageBadge ||
               this.policy?.EnableValidPageBadge;
+
+            // Update domain squatting detector with new configuration
+            // If URL allowlist changed, reinitialize detector to extract new domains
+            if (this.domainSquattingDetector) {
+              const detectionRules = this.detectionRulesManager.cachedRules;
+              const urlAllowlist = updatedConfig?.urlAllowlist || [];
+              await this.domainSquattingDetector.initialize(detectionRules, urlAllowlist);
+              logger.log("Domain squatting detector configuration updated");
+            }
 
             // If badge was disabled, remove badges from all tabs
             if (previousBadgeEnabled && !newBadgeEnabled) {

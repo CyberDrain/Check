@@ -1928,5 +1928,52 @@
     "log_matches": true,
     "auto_update": true,
     "fallback_on_error": true
+  },
+  "domain_squatting": {
+    "description": "Domain squatting detection configuration to protect against typosquatting, homoglyphs, and combosquatting attacks",
+    "enabled": true,
+    "action": "block",
+    "deviation_threshold": 2,
+    "algorithms": {
+      "levenshtein": true,
+      "homoglyph": true,
+      "typosquat": true,
+      "combosquat": true
+    },
+    "protected_domains": [
+      "microsoft.com",
+      "microsoftonline.com",
+      "office.com",
+      "office365.com",
+      "outlook.com",
+      "hotmail.com",
+      "live.com",
+      "onedrive.com",
+      "sharepoint.com",
+      "azure.com",
+      "windows.com",
+      "xbox.com",
+      "skype.com",
+      "linkedin.com",
+      "github.com",
+      "google.com",
+      "gmail.com",
+      "facebook.com",
+      "twitter.com",
+      "instagram.com",
+      "amazon.com",
+      "apple.com",
+      "paypal.com",
+      "netflix.com",
+      "dropbox.com",
+      "salesforce.com",
+      "adobe.com",
+      "zoom.us",
+      "slack.com",
+      "atlassian.com",
+      "shopify.com"
+    ],
+    "severity": "high",
+    "log_detections": true
   }
 }

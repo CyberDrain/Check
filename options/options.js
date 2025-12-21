@@ -66,6 +66,8 @@ class CheckOptions {
     this.elements.configDisplay = document.getElementById("configDisplay");
     this.elements.toggleConfigView =
       document.getElementById("toggleConfigView");
+    this.elements.expandCollapseAll =
+      document.getElementById("expandCollapseAll");
 
     // Rule Playground elements
     this.elements.playgroundRulesInput = document.getElementById("playgroundRulesInput");
@@ -164,6 +166,11 @@ class CheckOptions {
       this.toggleConfigView()
     );
 
+    // Expand/collapse all sections
+    this.elements.expandCollapseAll?.addEventListener("click", () =>
+      this.toggleExpandCollapseAll()
+    );
+
     // Simulate enterprise mode toggle (dev only)
     this.elements.simulateEnterpriseMode?.addEventListener("change", () =>
       this.toggleSimulateEnterpriseMode()
@@ -173,6 +180,9 @@ class CheckOptions {
     this.elements.refreshDetectionRules?.addEventListener("click", () =>
       this.refreshDetectionRules()
     );
+    
+    // Domain squatting management
+    // (View default domains now in Configuration Overview)
 
     // Playground actions
     this.elements.runRuleTestBtn?.addEventListener("click", () => this.runRulePlaygroundTest());
@@ -956,6 +966,7 @@ class CheckOptions {
       "false_positive_report",
       "page_blocked",
       "rogue_app_detected",
+      "domain_squatting_detected",
       "threat_detected",
       "validation_event"
     ];
@@ -1210,6 +1221,7 @@ class CheckOptions {
           "false_positive_report",
           "page_blocked",
           "rogue_app_detected",
+          "domain_squatting_detected",
           "threat_detected",
           "validation_event"
         ].filter(eventType => 
@@ -1426,332 +1438,280 @@ class CheckOptions {
     if (!this.elements.configDisplay) return;
 
     const sections = [];
+    let sectionId = 0;
 
-    // Basic info
-    sections.push(`
-      <div class="config-section">
-        <div class="config-section-title">Basic Information</div>
-        <div class="config-item"><strong>Version:</strong> <span class="config-value">${
-          config.version || "Unknown"
-        }</span></div>
-        <div class="config-item"><strong>Last Updated:</strong> <span class="config-value">${
-          config.lastUpdated || "Unknown"
-        }</span></div>
-        <div class="config-item"><strong>Description:</strong> ${
-          config.description || "No description"
-        }</div>
-      </div>
-    `);
+    // Helper function to create collapsible section
+    const createCollapsibleSection = (title, content, expanded = false) => {
+      const id = `config-section-${sectionId++}`;
+      return `
+        <div class="config-section-collapsible ${expanded ? 'expanded' : ''}" data-section-id="${id}">
+          <div class="config-section-header" data-toggle-section="${id}">
+            <div class="config-section-header-title">${title}</div>
+            <span class="config-section-toggle">►</span>
+          </div>
+          <div class="config-section-content">
+            <div class="config-section-body">
+              ${content}
+            </div>
+          </div>
+        </div>
+      `;
+    };
+
+    // Helper function to create expandable list
+    const createExpandableList = (items, label, showCount = 5) => {
+      if (!items || items.length === 0) return '';
+      
+      const listId = `list-${sectionId++}`;
+      const displayed = items.slice(0, showCount);
+      const remaining = items.slice(showCount);
+      
+      let html = displayed.map(item => `<div class="config-item">• ${item}</div>`).join('');
+      
+      if (remaining.length > 0) {
+        html += `
+          <div class="config-list-expanded" id="${listId}">
+            ${remaining.map(item => `<div class="config-item">• ${item}</div>`).join('')}
+          </div>
+          <div class="config-list-toggle" data-toggle-list="${listId}">
+            ▸ Show ${remaining.length} more ${label}
+          </div>
+        `;
+      }
+      
+      return html;
+    };
+
+    // Basic Information - Open by default
+    const basicInfoContent = `
+      <div class="config-item"><strong>Version:</strong> <span class="config-value">${config.version || "Unknown"}</span></div>
+      <div class="config-item"><strong>Last Updated:</strong> <span class="config-value">${config.lastUpdated || "Unknown"}</span></div>
+      <div class="config-item"><strong>Description:</strong> ${config.description || "No description"}</div>
+    `;
+    sections.push(createCollapsibleSection('Basic Information', basicInfoContent, true));
 
     // Detection Thresholds
     if (config.thresholds) {
-      sections.push(`
-        <div class="config-section">
-          <div class="config-section-title">Detection Thresholds</div>
-          <div class="config-item"><strong>Legitimate Site Threshold:</strong> <span class="config-value">${config.thresholds.legitimate}%</span></div>
-          <div class="config-item"><strong>Suspicious Site Threshold:</strong> <span class="config-value">${config.thresholds.suspicious}%</span></div>
-          <div class="config-item"><strong>Phishing Site Threshold:</strong> <span class="config-value">${config.thresholds.phishing}%</span></div>
-        </div>
-      `);
+      const thresholdsContent = `
+        <div class="config-item"><strong>Legitimate Site Threshold:</strong> <span class="config-value">${config.thresholds.legitimate}%</span></div>
+        <div class="config-item"><strong>Suspicious Site Threshold:</strong> <span class="config-value">${config.thresholds.suspicious}%</span></div>
+        <div class="config-item"><strong>Phishing Site Threshold:</strong> <span class="config-value">${config.thresholds.phishing}%</span></div>
+      `;
+      sections.push(createCollapsibleSection('Detection Thresholds', thresholdsContent, false));
     }
 
     // Trusted Login Patterns
-    if (
-      config.trusted_login_patterns &&
-      config.trusted_login_patterns.length > 0
-    ) {
-      sections.push(`
-        <div class="config-section">
-          <div class="config-section-title">Trusted Login Patterns (${
-            config.trusted_login_patterns.length
-          })</div>
-          ${config.trusted_login_patterns
-            .slice(0, 5)
-            .map((pattern) => `<div class="config-item">• ${pattern}</div>`)
-            .join("")}
-          ${
-            config.trusted_login_patterns.length > 5
-              ? `<div class="config-item">... and ${
-                  config.trusted_login_patterns.length - 5
-                } more</div>`
-              : ""
-          }
-        </div>
-      `);
+    if (config.trusted_login_patterns && config.trusted_login_patterns.length > 0) {
+      const patternsContent = createExpandableList(config.trusted_login_patterns, 'patterns', 5);
+      sections.push(createCollapsibleSection(
+        `Trusted Login Patterns (${config.trusted_login_patterns.length})`,
+        patternsContent,
+        false
+      ));
+    }
+
+    // Microsoft Domain Patterns
+    if (config.microsoft_domain_patterns && config.microsoft_domain_patterns.length > 0) {
+      const domainsContent = createExpandableList(config.microsoft_domain_patterns, 'domains', 10);
+      sections.push(createCollapsibleSection(
+        `Microsoft Domain Patterns (${config.microsoft_domain_patterns.length})`,
+        domainsContent,
+        false
+      ));
+    }
+
+    // Domain Squatting Detection
+    if (config.domain_squatting) {
+      const ds = config.domain_squatting;
+      let squattingContent = `
+        <div class="config-item"><strong>Enabled:</strong> <span class="config-value">${ds.enabled ? 'Yes' : 'No'}</span></div>
+        <div class="config-item"><strong>Deviation Threshold:</strong> <span class="config-value">${ds.deviation_threshold || 2}</span></div>
+        <div class="config-item"><strong>Action:</strong> <span class="config-value">${ds.action || 'block'}</span></div>
+        <div class="config-item"><strong>Severity:</strong> <span class="config-value">${ds.severity || 'high'}</span></div>
+      `;
+      
+      if (ds.algorithms) {
+        squattingContent += `<div class="config-item" style="margin-top: 8px;"><strong>Algorithms:</strong></div>`;
+        if (ds.algorithms.levenshtein !== false) squattingContent += `<div class="config-item" style="margin-left: 16px;">✓ Levenshtein Distance</div>`;
+        if (ds.algorithms.homoglyph !== false) squattingContent += `<div class="config-item" style="margin-left: 16px;">✓ Homoglyph Detection</div>`;
+        if (ds.algorithms.typosquat !== false) squattingContent += `<div class="config-item" style="margin-left: 16px;">✓ Typosquatting</div>`;
+        if (ds.algorithms.combosquat !== false) squattingContent += `<div class="config-item" style="margin-left: 16px;">✓ Combosquatting</div>`;
+      }
+      
+      if (ds.protected_domains && ds.protected_domains.length > 0) {
+        squattingContent += `<div class="config-item" style="margin-top: 8px;"><strong>Protected Domains (${ds.protected_domains.length}):</strong></div>`;
+        squattingContent += createExpandableList(ds.protected_domains, 'domains', 10);
+      }
+      
+      sections.push(createCollapsibleSection('Domain Squatting Detection', squattingContent, false));
+    }
+
+    // Rogue Apps Detection
+    if (config.rogue_apps_detection) {
+      const rogue = config.rogue_apps_detection;
+      const rogueContent = `
+        <div class="config-item"><strong>Enabled:</strong> <span class="config-value">${rogue.enabled ? 'Yes' : 'No'}</span></div>
+        <div class="config-item"><strong>Source URL:</strong> <span class="config-value" style="font-size: 10px; word-break: break-all;">${rogue.source_url || 'None'}</span></div>
+        <div class="config-item"><strong>Cache Duration:</strong> <span class="config-value">${Math.round((rogue.cache_duration || 0) / 3600000)}h</span></div>
+        <div class="config-item"><strong>Update Interval:</strong> <span class="config-value">${Math.round((rogue.update_interval || 0) / 3600000)}h</span></div>
+        <div class="config-item"><strong>Detection Action:</strong> <span class="config-value">${rogue.detection_action || 'None'}</span></div>
+        <div class="config-item"><strong>Auto Update:</strong> <span class="config-value">${rogue.auto_update ? 'Yes' : 'No'}</span></div>
+      `;
+      sections.push(createCollapsibleSection('Rogue Apps Detection', rogueContent, false));
+    }
+
+    // Phishing Indicators Summary
+    if (config.phishing_indicators && config.phishing_indicators.length > 0) {
+      const indicatorTypes = {};
+      const criticalCount = config.phishing_indicators.filter(i => i.severity === 'critical').length;
+      const codeDrivenCount = config.phishing_indicators.filter(i => i.code_driven).length;
+
+      config.phishing_indicators.forEach((indicator) => {
+        const type = indicator.type || indicator.category || 'unknown';
+        indicatorTypes[type] = (indicatorTypes[type] || 0) + 1;
+      });
+
+      let indicatorsContent = `
+        <div class="config-item"><strong>Total Indicators:</strong> <span class="config-value">${config.phishing_indicators.length}</span></div>
+        <div class="config-item"><strong>Critical Severity:</strong> <span class="config-value">${criticalCount}</span></div>
+        <div class="config-item"><strong>Code-Driven:</strong> <span class="config-value">${codeDrivenCount}</span></div>
+        <div class="config-item" style="margin-top: 8px;"><strong>By Type:</strong></div>
+      `;
+      
+      Object.entries(indicatorTypes).forEach(([type, count]) => {
+        indicatorsContent += `<div class="config-item" style="margin-left: 16px;">${type}: <span class="config-value">${count}</span></div>`;
+      });
+
+      sections.push(createCollapsibleSection('Phishing Indicators', indicatorsContent, false));
     }
 
     // Microsoft 365 Detection Requirements
     if (config.m365_detection_requirements) {
       const req = config.m365_detection_requirements;
-      const primaryCount = req.primary_elements
-        ? req.primary_elements.length
-        : 0;
-      const secondaryCount = req.secondary_elements
-        ? req.secondary_elements.length
-        : 0;
+      const primaryCount = req.primary_elements ? req.primary_elements.length : 0;
+      const secondaryCount = req.secondary_elements ? req.secondary_elements.length : 0;
 
-      sections.push(`
-        <div class="config-section">
-          <div class="config-section-title">Microsoft 365 Detection Requirements</div>
-          <div class="config-item"><strong>Primary Elements:</strong> <span class="config-value">${primaryCount}</span></div>
-          <div class="config-item"><strong>Secondary Elements:</strong> <span class="config-value">${secondaryCount}</span></div>
-          <div class="config-item"><strong>Description:</strong> ${
-            req.description || "No description"
-          }</div>
-        </div>
-      `);
-    }
-
-    // Microsoft Domain Patterns
-    if (
-      config.microsoft_domain_patterns &&
-      config.microsoft_domain_patterns.length > 0
-    ) {
-      sections.push(`
-        <div class="config-section">
-          <div class="config-section-title">Microsoft Domain Patterns (${
-            config.microsoft_domain_patterns.length
-          })</div>
-          ${config.microsoft_domain_patterns
-            .slice(0, 10)
-            .map((pattern) => `<div class="config-item">• ${pattern}</div>`)
-            .join("")}
-          ${
-            config.microsoft_domain_patterns.length > 10
-              ? `<div class="config-item">... and ${
-                  config.microsoft_domain_patterns.length - 10
-                } more</div>`
-              : ""
-          }
-        </div>
-      `);
+      const m365Content = `
+        <div class="config-item"><strong>Primary Elements:</strong> <span class="config-value">${primaryCount}</span></div>
+        <div class="config-item"><strong>Secondary Elements:</strong> <span class="config-value">${secondaryCount}</span></div>
+        <div class="config-item"><strong>Description:</strong> ${req.description || 'No description'}</div>
+      `;
+      sections.push(createCollapsibleSection('Microsoft 365 Detection Requirements', m365Content, false));
     }
 
     // Exclusion System
     if (config.exclusion_system) {
       const exclusions = config.exclusion_system;
       const domainPatterns = exclusions.domain_patterns || [];
-      const legitimateContexts =
-        exclusions.context_indicators?.legitimate_contexts || [];
-      const legitimateSsoPatterns =
-        exclusions.context_indicators?.legitimate_sso_patterns || [];
-      const suspiciousContexts =
-        exclusions.context_indicators?.suspicious_contexts || [];
+      const legitimateContexts = exclusions.context_indicators?.legitimate_contexts || [];
+      const legitimateSsoPatterns = exclusions.context_indicators?.legitimate_sso_patterns || [];
+      const suspiciousContexts = exclusions.context_indicators?.suspicious_contexts || [];
 
-      sections.push(`
-        <div class="config-section">
-          <div class="config-section-title">Exclusion System</div>
-          <div class="config-item"><strong>Domain Patterns:</strong> <span class="config-value">${
-            domainPatterns.length
-          }</span></div>
-          <div class="config-item"><strong>Legitimate Context Indicators:</strong> <span class="config-value">${
-            legitimateContexts.length
-          }</span></div>
-          <div class="config-item"><strong>Legitimate SSO Patterns:</strong> <span class="config-value">${
-            legitimateSsoPatterns.length
-          }</span></div>
-          <div class="config-item"><strong>Suspicious Context Indicators:</strong> <span class="config-value">${
-            suspiciousContexts.length
-          }</span></div>
-          <div class="config-item"><strong>Description:</strong> ${
-            exclusions.description || "No description"
-          }</div>
-          ${
-            domainPatterns.length > 0
-              ? `<div class="config-subsection">
-              <div class="config-subsection-title">Sample Domain Patterns:</div>
-              ${domainPatterns
-                .slice(0, 5)
-                .map((pattern) => `<div class="config-item">• ${pattern}</div>`)
-                .join("")}
-              ${
-                domainPatterns.length > 5
-                  ? `<div class="config-item">... and ${
-                      domainPatterns.length - 5
-                    } more</div>`
-                  : ""
-              }
-            </div>`
-              : ""
-          }
-        </div>
-      `);
-    }
-
-    // Phishing Indicators Summary
-    if (config.phishing_indicators && config.phishing_indicators.length > 0) {
-      const indicatorTypes = {};
-      const criticalCount = config.phishing_indicators.filter(
-        (indicator) => indicator.severity === "critical"
-      ).length;
-
-      config.phishing_indicators.forEach((indicator) => {
-        const type = indicator.type || "unknown";
-        indicatorTypes[type] = (indicatorTypes[type] || 0) + 1;
-      });
-
-      const indicatorSections = Object.entries(indicatorTypes)
-        .map(
-          ([type, count]) =>
-            `<div class="config-item"><strong>${type}:</strong> <span class="config-value">${count}</span></div>`
-        )
-        .join("");
-
-      // Code-driven indicators summary
-      const codeDrivenIndicators = config.phishing_indicators.filter(r => r.code_driven);
-      let codeDrivenHtml = '';
-      if (codeDrivenIndicators.length > 0) {
-        codeDrivenHtml = `<div class="config-item"><strong>Code-Driven Indicators:</strong> <span class="config-value">${codeDrivenIndicators.length}</span></div>`;
+      let exclusionsContent = `
+        <div class="config-item"><strong>Domain Patterns:</strong> <span class="config-value">${domainPatterns.length}</span></div>
+        <div class="config-item"><strong>Legitimate Context Indicators:</strong> <span class="config-value">${legitimateContexts.length}</span></div>
+        <div class="config-item"><strong>Legitimate SSO Patterns:</strong> <span class="config-value">${legitimateSsoPatterns.length}</span></div>
+        <div class="config-item"><strong>Suspicious Context Indicators:</strong> <span class="config-value">${suspiciousContexts.length}</span></div>
+      `;
+      
+      if (domainPatterns.length > 0) {
+        exclusionsContent += `<div class="config-item" style="margin-top: 8px;"><strong>Domain Patterns:</strong></div>`;
+        exclusionsContent += createExpandableList(domainPatterns, 'patterns', 5);
       }
 
-      sections.push(`
-        <div class="config-section">
-          <div class="config-section-title">Phishing Indicators (${config.phishing_indicators.length} total)</div>
-          <div class="config-item"><strong>Critical Severity Rules:</strong> <span class="config-value">${criticalCount}</span></div>
-          ${indicatorSections}
-          ${codeDrivenHtml}
-        </div>
-      `);
+      sections.push(createCollapsibleSection('Exclusion System', exclusionsContent, false));
     }
 
-    // Legacy format support - Trusted origins
-    if (config.trusted_origins && config.trusted_origins.length > 0) {
-      sections.push(`
-        <div class="config-section">
-          <div class="config-section-title">Trusted Origins (${
-            config.trusted_origins.length
-          })</div>
-          ${config.trusted_origins
-            .map((origin) => `<div class="config-item">• ${origin}</div>`)
-            .join("")}
-        </div>
-      `);
-    }
-
-    // Legacy format support - Pattern categories
-    const patternSections = [];
-    if (config.phishing && config.phishing.length > 0) {
-      patternSections.push(
-        `<div class="config-item"><strong>Phishing Patterns:</strong> <span class="config-value">${config.phishing.length}</span></div>`
-      );
-    }
-    if (config.malicious && config.malicious.length > 0) {
-      patternSections.push(
-        `<div class="config-item"><strong>Malicious Patterns:</strong> <span class="config-value">${config.malicious.length}</span></div>`
-      );
-    }
-    if (config.suspicious && config.suspicious.length > 0) {
-      patternSections.push(
-        `<div class="config-item"><strong>Suspicious Patterns:</strong> <span class="config-value">${config.suspicious.length}</span></div>`
-      );
-    }
-    if (config.legitimate_patterns && config.legitimate_patterns.length > 0) {
-      patternSections.push(
-        `<div class="config-item"><strong>Legitimate Patterns:</strong> <span class="config-value">${config.legitimate_patterns.length}</span></div>`
-      );
-    }
-
-    if (patternSections.length > 0) {
-      sections.push(`
-        <div class="config-section">
-          <div class="config-section-title">Legacy Pattern Categories</div>
-          ${patternSections.join("")}
-        </div>
-      `);
-    }
-
-    // Rogue apps detection
-    if (config.rogue_apps_detection) {
-      const rogue = config.rogue_apps_detection;
-      sections.push(`
-        <div class="config-section">
-          <div class="config-section-title">Rogue Apps Detection</div>
-          <div class="config-item"><strong>Enabled:</strong> <span class="config-value">${
-            rogue.enabled ? "Yes" : "No"
-          }</span></div>
-          <div class="config-item"><strong>Source:</strong> <span class="config-value">${
-            rogue.source_url ? rogue.source_url : "None"
-          }</span></div>
-          <div class="config-item"><strong>Cache Duration:</strong> <span class="config-value">${Math.round(
-            (rogue.cache_duration || 0) / 3600000
-          )}h</span></div>
-          <div class="config-item"><strong>Update Interval:</strong> <span class="config-value">${Math.round(
-            (rogue.update_interval || 0) / 3600000
-          )}h</span></div>
-          <div class="config-item"><strong>Detection Action:</strong> <span class="config-value">${
-            rogue.detection_action || "None"
-          }</span></div>
-          <div class="config-item"><strong>Auto Update:</strong> <span class="config-value">${
-            rogue.auto_update ? "Yes" : "No"
-          }</span></div>
-        </div>
-      `);
-    }
-
-    // Configuration statistics
+    // Configuration Statistics
     let totalPatterns = 0;
-    if (config.phishing_indicators)
-      totalPatterns += config.phishing_indicators.length;
+    if (config.phishing_indicators) totalPatterns += config.phishing_indicators.length;
     if (config.phishing) totalPatterns += config.phishing.length;
     if (config.malicious) totalPatterns += config.malicious.length;
     if (config.suspicious) totalPatterns += config.suspicious.length;
-    if (config.legitimate_patterns)
-      totalPatterns += config.legitimate_patterns.length;
-
-    let totalDetectionElements = 0;
-    if (config.m365_detection_requirements) {
-      if (config.m365_detection_requirements.primary_elements)
-        totalDetectionElements +=
-          config.m365_detection_requirements.primary_elements.length;
-      if (config.m365_detection_requirements.secondary_elements)
-        totalDetectionElements +=
-          config.m365_detection_requirements.secondary_elements.length;
-    }
-
-    let totalExclusions = 0;
-    if (config.exclusion_system) {
-      if (config.exclusion_system.domain_patterns)
-        totalExclusions += config.exclusion_system.domain_patterns.length;
-      if (config.exclusion_system.context_indicators?.legitimate_contexts)
-        totalExclusions +=
-          config.exclusion_system.context_indicators.legitimate_contexts.length;
-      if (config.exclusion_system.context_indicators?.legitimate_sso_patterns)
-        totalExclusions +=
-          config.exclusion_system.context_indicators.legitimate_sso_patterns
-            .length;
-      if (config.exclusion_system.context_indicators?.suspicious_contexts)
-        totalExclusions +=
-          config.exclusion_system.context_indicators.suspicious_contexts.length;
-    }
+    if (config.legitimate_patterns) totalPatterns += config.legitimate_patterns.length;
 
     let criticalRules = 0;
     if (config.phishing_indicators) {
-      criticalRules = config.phishing_indicators.filter(
-        (indicator) => indicator.severity === "critical"
-      ).length;
+      criticalRules = config.phishing_indicators.filter(i => i.severity === 'critical').length;
     }
 
-    sections.push(`
-      <div class="config-section">
-        <div class="config-section-title">Configuration Statistics</div>
-        <div class="config-item"><strong>Total Detection Patterns:</strong> <span class="config-value">${totalPatterns}</span></div>
-        <div class="config-item"><strong>Microsoft 365 Detection Elements:</strong> <span class="config-value">${totalDetectionElements}</span></div>
-        <div class="config-item"><strong>Trusted Login Patterns:</strong> <span class="config-value">${
-          config.trusted_login_patterns
-            ? config.trusted_login_patterns.length
-            : 0
-        }</span></div>
-        <div class="config-item"><strong>Microsoft Domain Patterns:</strong> <span class="config-value">${
-          config.microsoft_domain_patterns
-            ? config.microsoft_domain_patterns.length
-            : 0
-        }</span></div>
-        <div class="config-item"><strong>Critical Severity Rules:</strong> <span class="config-value">${criticalRules}</span></div>
-        <div class="config-item"><strong>Total Exclusions:</strong> <span class="config-value">${totalExclusions}</span></div>
-      </div>
-    `);
+    const statsContent = `
+      <div class="config-item"><strong>Total Detection Patterns:</strong> <span class="config-value">${totalPatterns}</span></div>
+      <div class="config-item"><strong>Trusted Login Patterns:</strong> <span class="config-value">${config.trusted_login_patterns ? config.trusted_login_patterns.length : 0}</span></div>
+      <div class="config-item"><strong>Microsoft Domain Patterns:</strong> <span class="config-value">${config.microsoft_domain_patterns ? config.microsoft_domain_patterns.length : 0}</span></div>
+      <div class="config-item"><strong>Critical Severity Rules:</strong> <span class="config-value">${criticalRules}</span></div>
+    `;
+    sections.push(createCollapsibleSection('Configuration Statistics', statsContent, false));
 
-    this.elements.configDisplay.innerHTML = sections.join("");
+    this.elements.configDisplay.innerHTML = sections.join('');
+    
+    // Add event delegation for collapsible sections
+    this.elements.configDisplay.querySelectorAll('[data-toggle-section]').forEach(header => {
+      header.addEventListener('click', () => {
+        const sectionId = header.getAttribute('data-toggle-section');
+        this.toggleConfigSection(sectionId);
+      });
+    });
+    
+    // Add event delegation for expandable lists
+    this.elements.configDisplay.querySelectorAll('[data-toggle-list]').forEach(toggle => {
+      toggle.addEventListener('click', () => {
+        const listId = toggle.getAttribute('data-toggle-list');
+        this.toggleConfigList(listId);
+      });
+    });
+  }
+
+  toggleConfigSection(sectionId) {
+    const section = document.querySelector(`[data-section-id="${sectionId}"]`);
+    if (section) {
+      section.classList.toggle('expanded');
+    }
+  }
+
+  toggleConfigList(listId) {
+    const list = document.getElementById(listId);
+    const toggle = list?.nextElementSibling;
+    if (list && toggle) {
+      const isVisible = list.classList.contains('visible');
+      list.classList.toggle('visible');
+      if (isVisible) {
+        const remaining = list.querySelectorAll('.config-item').length;
+        const label = toggle.textContent.match(/more (.+)$/)?.[1] || 'items';
+        toggle.textContent = `▸ Show ${remaining} more ${label}`;
+      } else {
+        toggle.textContent = `▾ Hide details`;
+      }
+    }
+  }
+
+  toggleExpandCollapseAll() {
+    const sections = document.querySelectorAll('.config-section-collapsible');
+    if (!sections.length) return;
+
+    // Check if any section is collapsed
+    const hasCollapsed = Array.from(sections).some(section => !section.classList.contains('expanded'));
+    
+    // If any are collapsed, expand all. Otherwise, collapse all.
+    sections.forEach(section => {
+      if (hasCollapsed) {
+        section.classList.add('expanded');
+      } else {
+        section.classList.remove('expanded');
+      }
+    });
+
+    // Update button text
+    if (this.elements.expandCollapseAll) {
+      const icon = this.elements.expandCollapseAll.querySelector(".material-icons");
+      if (hasCollapsed) {
+        icon.textContent = "unfold_less";
+        this.elements.expandCollapseAll.innerHTML = '<span class="material-icons">unfold_less</span> Collapse All';
+      } else {
+        icon.textContent = "unfold_more";
+        this.elements.expandCollapseAll.innerHTML = '<span class="material-icons">unfold_more</span> Expand All';
+      }
+    }
   }
 
   toggleConfigView() {
@@ -1806,6 +1766,11 @@ class CheckOptions {
 
     console.log("Simulate Enterprise Mode:", this.simulateEnterpriseMode);
 
+    // If disabling, reload the original branding configuration first
+    if (!this.simulateEnterpriseMode) {
+      await this.loadBrandingConfiguration();
+    }
+
     // Reload the policy information to apply/remove enterprise restrictions
     await this.loadPolicyInfo();
 
@@ -1815,7 +1780,7 @@ class CheckOptions {
     // Show notification to user
     const mode = this.simulateEnterpriseMode ? "enabled" : "disabled";
     this.showToast(
-      `Enterprise simulation mode ${mode}. Page will reflect policy restrictions.`,
+      `Enterprise simulation mode ${mode}. Page will reflect ${this.simulateEnterpriseMode ? 'policy restrictions' : 'original settings'}.`,
       "info"
     );
   }
@@ -2512,10 +2477,20 @@ class CheckOptions {
       } else {
         console.log("👤 No managed policies found - user mode");
 
+        // Clear managed policies
+        this.managedPolicies = null;
+
+        // Restore original branding (not enterprise branding)
+        await this.loadBrandingConfiguration();
+        this.applyBranding();
+
         // Hide policy badge
         if (this.elements.policyBadge) {
           this.elements.policyBadge.style.display = "none";
         }
+
+        // Re-enable all fields that might have been disabled by policies
+        this.enableAllPolicyManagedFields();
       }
     } catch (error) {
       console.error("Failed to load policy info:", error);
@@ -2653,6 +2628,76 @@ class CheckOptions {
         element.parentNode.appendChild(lockIcon);
       }
     }
+  }
+
+  enableAllPolicyManagedFields() {
+    // Re-enable all fields that might have been disabled by policies
+    const allFields = [
+      this.elements.showNotifications,
+      this.elements.enableValidPageBadge,
+      this.elements.enablePageBlocking,
+      this.elements.enableCippReporting,
+      this.elements.cippServerUrl,
+      this.elements.cippTenantId,
+      this.elements.customRulesUrl,
+      this.elements.updateInterval,
+      this.elements.urlAllowlist,
+      this.elements.enableDebugLogging,
+      this.elements.companyName,
+      this.elements.companyURL,
+      this.elements.productName,
+      this.elements.supportEmail,
+      this.elements.primaryColor,
+      this.elements.logoUrl,
+    ];
+
+    allFields.forEach((element) => {
+      if (element) {
+        element.disabled = false;
+        element.title = '';
+        element.classList.remove("policy-managed");
+
+        // Remove lock icons
+        const lockIcon = element.parentNode?.querySelector(".policy-lock");
+        if (lockIcon) {
+          lockIcon.remove();
+        }
+      }
+    });
+
+    // Re-enable the save button and restore original text
+    if (this.elements.saveSettings) {
+      this.elements.saveSettings.title = "Save all settings";
+      this.elements.saveSettings.textContent = "Save Settings";
+      this.elements.saveSettings.classList.remove("managed-mode");
+    }
+
+    // Re-show tabs that might have been hidden
+    const restrictedTabs = ["general", "detection", "branding"];
+    restrictedTabs.forEach((tabName) => {
+      const menuItem = document.querySelector(`[data-section="${tabName}"]`);
+      if (menuItem) {
+        const listItem = menuItem.closest("li");
+        if (listItem) {
+          listItem.style.display = "";
+        }
+      }
+    });
+
+    // Remove enterprise notice
+    const enterpriseNotice = document.querySelector(".enterprise-notice");
+    if (enterpriseNotice) {
+      enterpriseNotice.remove();
+    }
+
+    // Remove development notice
+    const devNotice = document.querySelector(".development-notice");
+    if (devNotice) {
+      devNotice.remove();
+    }
+
+    // Clear enterprise managed flag
+    this.isEnterpriseManaged = false;
   }
 
   applyEnterpriseRestrictions(policies) {
@@ -3566,7 +3611,74 @@ class CheckOptions {
       toggleIcon.textContent = "dark_mode";
     }
   }
+  
+  async viewDefaultDomains() {
+    try {
+      // Load detection rules to get default protected domains
+      const result = await chrome.storage.local.get(['detection_rules_cache']);
+      const cachedRules = result?.detection_rules_cache?.rules;
+      
+      let defaultDomains = [];
+      if (cachedRules && cachedRules.domain_squatting && cachedRules.domain_squatting.protected_domains) {
+        defaultDomains = cachedRules.domain_squatting.protected_domains;
+      } else {
+        // Fallback to loading from local file
+        const response = await fetch(chrome.runtime.getURL('rules/detection-rules.json'));
+        const rules = await response.json();
+        if (rules.domain_squatting && rules.domain_squatting.protected_domains) {
+          defaultDomains = rules.domain_squatting.protected_domains;
+        }
+      }
+      
+      if (defaultDomains.length === 0) {
+        this.showToast('No default protected domains found', 'warning');
+        return;
+      }
+      
+      // Show confirm dialog with default domains
+      const domainList = defaultDomains.map(d => `• ${d}`).join('\n');
+      const message = `Default Protected Domains (${defaultDomains.length}):\n\n${domainList}\n\nThese domains are protected by default. You can add additional domains in the "Protected Domains" field above.`;
+      
+      await this.showConfirmDialog(
+        'Default Protected Domains',
+        message
+      );
+    } catch (error) {
+      console.error('Failed to load default domains:', error);
+      this.showToast('Failed to load default protected domains', 'error');
+    }
+  }
 }
+
+// Minimal config summary: just show code-driven indicator count and key settings
+function renderConfigSummary(config) {
+  const codeDrivenDiv = document.getElementById('codeDrivenIndicators');
+  const keySettingsUl = document.getElementById('configKeySettings');
+  if (!config || !config.phishing_indicators) return;
+  // Show only code-driven indicator count
+  const codeDrivenCount = config.phishing_indicators.filter(r => r.code_driven).length;
+  codeDrivenDiv.innerHTML = `<div class="config-item"><strong>Code-Driven Indicators:</strong> <span class="config-value">${codeDrivenCount}</span></div>`;
+  // Show some key settings
+  keySettingsUl.innerHTML = '';
+  if (config.version) keySettingsUl.innerHTML += `<li><strong>Rules Version:</strong> ${config.version}</li>`;
+  if (config.lastUpdated) keySettingsUl.innerHTML += `<li><strong>Last Updated:</strong> ${config.lastUpdated}</li>`;
+  if (config.detection_settings && config.detection_settings.block_threshold !== undefined) {
+    keySettingsUl.innerHTML += `<li><strong>Block Threshold:</strong> ${config.detection_settings.block_threshold}</li>`;
+  }
+  if (config.detection_settings && config.detection_settings.warn_threshold !== undefined) {
+    keySettingsUl.innerHTML += `<li><strong>Warn Threshold:</strong> ${config.detection_settings.warn_threshold}</li>`;
+  }
+}
+
+// Patch into config loading logic
+(function() {
+  const origShowConfig = window.showConfigDisplay;
+  window.showConfigDisplay = function(config) {
+    if (typeof origShowConfig === 'function') origShowConfig(config);
+    renderConfigSummary(config);
+    document.getElementById('configSummary').style.display = '';
+  };
+})();
 
 // Initialize options page when DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {

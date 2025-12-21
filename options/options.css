@@ -722,6 +722,96 @@ body {
   letter-spacing: 0.3px;
 }
 
+/* Collapsible config sections */
+.config-section-collapsible {
+  margin-bottom: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface-color);
+}
+
+.config-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--surface-color);
+  transition: background-color 0.2s ease;
+}
+
+.config-section-header:hover {
+  background: var(--background-color);
+}
+
+.config-section-header-title {
+  font-weight: 600;
+  color: var(--primary-color);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.config-section-toggle {
+  color: var(--text-muted);
+  font-size: 20px;
+  transition: transform 0.2s ease;
+  line-height: 1;
+  transform: rotate(180deg);
+}
+
+.config-section-collapsible.expanded .config-section-toggle {
+  transform: rotate(90deg);
+}
+
+.config-section-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.6s ease-out;
+}
+
+.config-section-collapsible.expanded .config-section-content {
+  max-height: 2000px; /* Large enough for content */
+  transition: max-height 0.8s ease-in;
+}
+
+.config-section-body {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+/* Nested collapsible for lists */
+.config-list-toggle {
+  color: var(--primary-color);
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: 12px;
+  margin-top: 8px;
+  display: inline-block;
+  transition: color 0.2s ease;
+}
+
+.config-list-toggle:hover {
+  color: var(--primary-hover);
+}
+
+.config-list-expanded {
+  margin-top: 0;
+  margin-bottom: 8px;
+  padding-left: 0;
+  display: none;
+  transition: all 0.5s ease;
+}
+
+.config-list-expanded.visible {
+  display: block;
+}
+
 .config-raw-json {
   white-space: pre-wrap;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
