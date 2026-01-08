@@ -583,9 +583,25 @@ if (window.checkExtensionLoaded) {
    */
   async function loadDeveloperConsoleLoggingSetting() {
     try {
+      // Request config from background to get merged enterprise + local config
       const config = await new Promise((resolve) => {
-        chrome.storage.local.get(["config"], (result) => {
-          resolve(result.config || {});
+        chrome.runtime.sendMessage({ type: "GET_CONFIG" }, (response) => {
+          if (chrome.runtime.lastError) {
+            logger.log(
+              `[M365-Protection] Error getting config from background: ${chrome.runtime.lastError.message}`
+            );
+            // Fallback to local storage if background not available
+            chrome.storage.local.get(["config"], (result) => {
+              resolve(result.config || {});
+            });
+          } else if (!response || !response.success) {
+            // Fallback to local storage if response invalid
+            chrome.storage.local.get(["config"], (result) => {
+              resolve(result.config || {});
+            });
+          } else {
+            resolve(response.config);
+          }
         });
       });
 
@@ -5580,12 +5596,27 @@ if (window.checkExtensionLoaded) {
       // Set flag to prevent DOM monitoring loops
       showingBanner = true;
 
-      // Fetch branding configuration (uniform pattern: storage only, like applyBrandingColors)
+      // Fetch branding configuration from background to get merged config
       const fetchBranding = () =>
         new Promise((resolve) => {
           try {
-            chrome.storage.local.get(["brandingConfig"], (result) => {
-              resolve(result?.brandingConfig || {});
+            chrome.runtime.sendMessage({ type: "GET_BRANDING_CONFIG" }, (response) => {
+              if (chrome.runtime.lastError) {
+                logger.log(
+                  `[M365-Protection] Error getting branding from background: ${chrome.runtime.lastError.message}`
+                );
+                // Fallback to local storage if background not available
+                chrome.storage.local.get(["brandingConfig"], (result) => {
+                  resolve(result?.brandingConfig || {});
+                });
+              } else if (!response || !response.success) {
+                // Fallback to local storage if response invalid
+                chrome.storage.local.get(["brandingConfig"], (result) => {
+                  resolve(result?.brandingConfig || {});
+                });
+              } else {
+                resolve(response.branding || {});
+              }
             });
           } catch (_) {
             resolve({});
@@ -5902,10 +5933,25 @@ if (window.checkExtensionLoaded) {
         validBadgeTimeoutId = null;
       }
 
-      // Load timeout configuration
+      // Load timeout configuration from background to get merged config
       const config = await new Promise((resolve) => {
-        chrome.storage.local.get(["config"], (result) => {
-          resolve(result.config || {});
+        chrome.runtime.sendMessage({ type: "GET_CONFIG" }, (response) => {
+          if (chrome.runtime.lastError) {
+            logger.log(
+              `[M365-Protection] Error getting config from background: ${chrome.runtime.lastError.message}`
+            );
+            // Fallback to local storage if background not available
+            chrome.storage.local.get(["config"], (result) => {
+              resolve(result.config || {});
+            });
+          } else if (!response || !response.success) {
+            // Fallback to local storage if response invalid
+            chrome.storage.local.get(["config"], (result) => {
+              resolve(result.config || {});
+            });
+          } else {
+            resolve(response.config);
+          }
         });
       });
 
@@ -6281,14 +6327,27 @@ if (window.checkExtensionLoaded) {
         return;
       }
 
-      // Get CIPP configuration from storage
-      const result = await new Promise((resolve) => {
-        chrome.storage.local.get(["config"], (result) => {
-          resolve(result.config || {});
+      // Get CIPP configuration from background to get merged config
+      const config = await new Promise((resolve) => {
+        chrome.runtime.sendMessage({ type: "GET_CONFIG" }, (response) => {
+          if (chrome.runtime.lastError) {
+            logger.log(
+              `[M365-Protection] Error getting config from background: ${chrome.runtime.lastError.message}`
+            );
+            // Fallback to local storage if background not available
+            chrome.storage.local.get(["config"], (result) => {
+              resolve(result.config || {});
+            });
+          } else if (!response || !response.success) {
+            // Fallback to local storage if response invalid
+            chrome.storage.local.get(["config"], (result) => {
+              resolve(result.config || {});
+            });
+          } else {
+            resolve(response.config);
+          }
         });
       });
-
-      const config = result;
 
       // Check if CIPP reporting is enabled and URL is configured
       if (!config.enableCippReporting || !config.cippServerUrl) {
@@ -6348,10 +6407,25 @@ if (window.checkExtensionLoaded) {
    */
   async function applyBrandingColors() {
     try {
-      // Get branding configuration from storage
+      // Get branding configuration from background to get merged config
       const result = await new Promise((resolve) => {
-        chrome.storage.local.get(["brandingConfig"], (result) => {
-          resolve(result.brandingConfig || {});
+        chrome.runtime.sendMessage({ type: "GET_BRANDING_CONFIG" }, (response) => {
+          if (chrome.runtime.lastError) {
+            logger.log(
+              `[M365-Protection] Error getting branding from background: ${chrome.runtime.lastError.message}`
+            );
+            // Fallback to local storage if background not available
+            chrome.storage.local.get(["brandingConfig"], (result) => {
+              resolve(result?.brandingConfig || {});
+            });
+          } else if (!response || !response.success) {
+            // Fallback to local storage if response invalid
+            chrome.storage.local.get(["brandingConfig"], (result) => {
+              resolve(result?.brandingConfig || {});
+            });
+          } else {
+            resolve(response.branding || {});
+          }
         });
       });
 

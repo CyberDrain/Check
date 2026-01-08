@@ -7,7 +7,7 @@ import { chrome, storage } from "../browser-polyfill.js";
 import logger from "../utils/logger.js";
 
 export class DetectionRulesManager {
-  constructor() {
+  constructor(configManager = null) {
     this.cachedRules = null;
     this.lastUpdate = 0;
     this.updateInterval = 24 * 60 * 60 * 1000; // Default: 24 hours
@@ -16,6 +16,7 @@ export class DetectionRulesManager {
     this.remoteUrl =
       "https://raw.githubusercontent.com/CyberDrain/Check/refs/heads/main/rules/detection-rules.json";
     this.config = null;
+    this.configManager = configManager;
     this.initialized = false;
   }
 
@@ -53,9 +54,14 @@ export class DetectionRulesManager {
 
   async loadConfiguration() {
     try {
-      // Load from chrome storage to get user configuration
-      const result = await storage.local.get(["config"]);
-      this.config = result?.config || {};
+      // Use ConfigManager if available to get merged configuration (enterprise + local)
+      if (this.configManager) {
+        this.config = await this.configManager.getConfig();
+      } else {
+        // Fallback to direct storage access if ConfigManager is not available
+        const result = await storage.local.get(["config"]);
+        this.config = result?.config || {};
+      }
 
       // Set remote URL from configuration or use default
       if (this.config.customRulesUrl) {

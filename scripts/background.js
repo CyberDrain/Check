@@ -288,7 +288,7 @@ class CheckBackground {
   constructor() {
     this.configManager = new ConfigManager();
     this.policyManager = new PolicyManager();
-    this.detectionRulesManager = new DetectionRulesManager();
+    this.detectionRulesManager = new DetectionRulesManager(this.configManager);
     this.rogueAppsManager = new RogueAppsManager();
     this.webhookManager = new WebhookManager(this.configManager);
     this.isInitialized = false;
