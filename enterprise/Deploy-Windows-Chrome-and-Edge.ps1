@@ -14,6 +14,7 @@ $edgeExtensionSettingsKey = "HKLM:\SOFTWARE\Policies\Microsoft\Edge\ExtensionSet
 # Extension Configuration Settings
 $showNotifications = 1 # 0 = Unchecked, 1 = Checked (Enabled); default is 1; This will set the "Show Notifications" option in the extension settings.
 $enableValidPageBadge = 0 # 0 = Unchecked, 1 = Checked (Enabled); default is 0; This will set the "Show Valid Page Badge" option in the extension settings.
+$validPageBadgeTimeout = 5 # Auto-dismiss timeout for the valid page badge in seconds. Maximum 300. Set to 0 for no timeout (badge stays visible until manually dismissed).
 $enablePageBlocking = 1 # 0 = Unchecked, 1 = Checked (Enabled); default is 1; This will set the "Enable Page Blocking" option in the extension settings.
 $forceToolbarPin = 1 # 0 = Not pinned, 1 = Force pinned to toolbar; default is 1
 $enableCippReporting = 0 # 0 = Unchecked, 1 = Checked (Enabled); default is 1; This will set the "Enable CIPP Reporting" option in the extension settings.
@@ -61,6 +62,7 @@ function Configure-ExtensionSettings {
     # Set extension configuration settings
     New-ItemProperty -Path $ManagedStorageKey -Name "showNotifications" -PropertyType DWord -Value $showNotifications -Force | Out-Null
     New-ItemProperty -Path $ManagedStorageKey -Name "enableValidPageBadge" -PropertyType DWord -Value $enableValidPageBadge -Force | Out-Null
+    New-ItemProperty -Path $ManagedStorageKey -Name "validPageBadgeTimeout" -PropertyType DWord -Value $validPageBadgeTimeout -Force | Out-Null
     New-ItemProperty -Path $ManagedStorageKey -Name "enablePageBlocking" -PropertyType DWord -Value $enablePageBlocking -Force | Out-Null
     New-ItemProperty -Path $ManagedStorageKey -Name "enableCippReporting" -PropertyType DWord -Value $enableCippReporting -Force | Out-Null
     New-ItemProperty -Path $ManagedStorageKey -Name "cippServerUrl" -PropertyType String -Value $cippServerUrl -Force | Out-Null
