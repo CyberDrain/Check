@@ -192,8 +192,8 @@ Enterprise policies always take precedence over manual settings.
 
 ### **Technical requirements:**
 
-* Format: PNG, JPG, or SVG
-* Size: 48x48 pixels recommended (maximum 128x128, recommended 200x200px or smaller for enterprise deployments)
+* Format: PNG, JPG, ICO or SVG
+* Size: 48x48 pixels recommended (maximum 128x128px, recommended 200x200px or smaller for enterprise deployments)
 * Must be accessible via HTTPS URL
 
 ### **Design tips:**
