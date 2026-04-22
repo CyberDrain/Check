@@ -66,7 +66,7 @@ class RogueAppsManager {
     this.defaultConfig = {
       enabled: true,
       source_url:
-        "https://raw.githubusercontent.com/huntresslabs/rogueapps/refs/heads/main/public/rogueapps.json",
+        "https://huntresslabs.github.io/rogueapps/rogueapps.json",
       cache_duration: 86400000, // 24 hours
       update_interval: 43200000, // 12 hours
       detection_action: "warn",
