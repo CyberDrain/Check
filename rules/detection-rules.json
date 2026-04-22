@@ -1831,7 +1831,7 @@
   "rogue_apps_detection": {
     "description": "Dynamic detection of known rogue OAuth applications",
     "enabled": true,
-    "source_url": "https://raw.githubusercontent.com/huntresslabs/rogueapps/refs/heads/main/public/rogueapps.json",
+    "source_url": "https://huntresslabs.github.io/rogueapps/rogueapps.json",
     "cache_duration": 86400000,
     "update_interval": 43200000,
     "detection_action": "warn",
