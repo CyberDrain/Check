@@ -231,7 +231,7 @@ Enterprise policies always take precedence over manual settings.
 3. Make sure the URL starts with `https://`
 4. Verify the image file isn't too large
 5. Verify logo URLs are publicly accessible (if using external URL)
-6. Check image format (PNG, JPG, SVG supported)
+6. Check image format (PNG, JPG, ICO, SVG supported)
 7. Ensure image size is reasonable
 
 ### **Colors not applying:**
