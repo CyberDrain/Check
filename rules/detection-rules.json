@@ -60,7 +60,20 @@
       "^https:\\/\\/(?:[^/]*\\.)?zoom\\.us(/.*)?$",
       "^https:\\/\\/github\\.com(/.*)?$",
       "^https:\\/\\/[^/]*\\.github\\.com(/.*)?$",
-      "^https:\\/\\/[^/]*\\.github\\.io(/.*)?$"
+      "^https:\\/\\/[^/]*\\.github\\.io(/.*)?$",
+      "^https://[^/]*\\.mycurricula\\.com(/.*)?$",
+      "^https://[^/]*\\.notificationservices\\.org(/.*)?$",
+      "^https://[^/]*\\.reddit\\.com(/.*)?$",
+      "^https://[^/]*\\.corestrengths\\.com(/.*)?$",
+      "^https://[^/]*\\.fs\\.com(/.*)?$",
+      "^https://[^/]*\\.halopsa\\.com(/.*)?$",
+      "^https://[^/]*\\.jotform\\.com(/.*)?$",
+      "^https://[^/]*\\.seagateciam\\.ciamlogin\\.com(/.*)?$",
+      "^https://[^/]*\\.lenovo\\.com(/.*)?$",
+      "^https://[^/]*\\.plumsail\\.com(/.*)?$",
+      "^https://[^/]*\\.app\\.vyond\\.com(/.*)?$",
+      "^https:\\/\\/[^/]*\\.zoho\\.com(/.*)?$",
+      "^https:\\/\\/[^/]*\\.zoho\\.com\\.au(/.*)?$"
     ],
     "context_indicators": {
       "description": "Additional context that indicates legitimate discussion vs phishing",
@@ -2007,19 +2020,5 @@
     "log_matches": true,
     "auto_update": true,
     "fallback_on_error": true
-  },
-  "domain_squatting": {
-    "description": "Domain squatting detection configuration to protect against typosquatting, homoglyphs, and combosquatting attacks",
-    "action": "block",
-    "deviation_threshold": 2,
-    "algorithms": {
-      "levenshtein": true,
-      "homoglyph": true,
-      "typosquat": true,
-      "combosquat": true
-    },
-    "protected_domains": [],
-    "severity": "high",
-    "log_detections": true
   }
 }
