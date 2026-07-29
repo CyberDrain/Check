@@ -7,7 +7,7 @@ This removes all extension-specific policy values created during deployment for 
 ## Uninstall Script
 
 1. Run the script as Administrator on the target endpoint.
-2. Use this when testing policy changes and you want a clean baseline before re-deploying.
-3. After running, restart Chrome and Edge to ensure policy refresh.
+2. Use the script when testing policy changes and you want a clean baseline before redeploying.
+3. After running the script, restart Chrome and Edge to ensure that their policies refresh.
 
 <a href="https://raw.githubusercontent.com/CyberDrain/Check/refs/heads/main/enterprise/Remove-Windows-Chrome-and-Edge.ps1" class="button primary">Download the Uninstall Script from GitHub</a>

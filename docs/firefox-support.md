@@ -69,13 +69,13 @@ Firefox supports enterprise deployment through the `policies.json` file. This me
 
 #### Windows Deployment
 
-1.  Create or edit the policies file at:
+1. Create or edit the policies file at:
 
     ```
     %ProgramFiles%\Mozilla Firefox\distribution\policies.json
     ```
 2. Use the template from `enterprise/firefox/policies.json` in the repository
-3.  Update the `install_url` to point to your signed .xpi file:
+3. Update the `install_url` to point to your signed `.xpi` file:
 
     ```json
     {
@@ -93,7 +93,7 @@ Firefox supports enterprise deployment through the `policies.json` file. This me
    * **macOS**: `/Applications/Firefox.app/Contents/Resources/distribution/policies.json`
    * **Linux**: `/etc/firefox/policies/policies.json` or `/usr/lib/firefox/distribution/policies.json`
 2. Use the template from `enterprise/firefox/policies.json`
-3.  Set proper permissions:
+3. Set proper permissions:
 
     ```bash
     sudo chmod 644 /path/to/policies.json
@@ -187,21 +187,21 @@ Disabling signature verification is only recommended for development and testing
 For production deployment, you need to sign the extension with Mozilla:
 
 1. Create a Mozilla Add-ons account at [addons.mozilla.org](https://addons.mozilla.org)
-2.  Package your extension:
+2. Package your extension:
 
     ```bash
     npm run build:firefox
     zip -r check-firefox.zip . -x ".*" "node_modules/*" "tests/*" "*.md" "manifest.chrome.json"
     ```
 3. Submit to Mozilla for signing (unlisted distribution for enterprise)
-4. Download the signed .xpi file
-5. Host the .xpi file on your server or use Mozilla's CDN
+4. Download the signed `.xpi` file
+5. Host the `.xpi` file on your server or use Mozilla's CDN
 
 ### Self-Distribution
 
-For enterprise environments, you can self-distribute the signed .xpi:
+For enterprise environments, you can self-distribute the signed `.xpi` file:
 
-1. Host the .xpi file on an internal web server
+1. Host the `.xpi` file on an internal web server
 2. Configure `policies.json` with your internal URL
 3. Deploy the policies file to managed devices
 
@@ -227,13 +227,13 @@ For enterprise environments, you can self-distribute the signed .xpi:
 
 When contributing or making changes, always test in both Chrome/Edge and Firefox:
 
-1.  Test in Chrome/Edge:
+1. Test in Chrome/Edge:
 
     ```bash
     npm run build:chrome
     # Load in Chrome
     ```
-2.  Test in Firefox:
+2. Test in Firefox:
 
     ```bash
     npm run build:firefox
@@ -261,7 +261,7 @@ When contributing or making changes, always test in both Chrome/Edge and Firefox
 
 **Solutions**:
 
-* Firefox uses `background.scripts` not `service_worker`
+* Firefox uses `background.scripts`, not `service_worker`
 * Verify the build script ran successfully
 * Check for module loading errors in the Browser Console
 
@@ -271,11 +271,11 @@ When contributing or making changes, always test in both Chrome/Edge and Firefox
 
 **Solutions**:
 
-* Verify policies.json is in the correct location for your OS
+* Verify that `policies.json` is in the correct location for your OS
 * Check file permissions (must be readable by Firefox)
-* Restart Firefox after adding/modifying policies
+* Restart Firefox after adding or modifying policies
 * Use `about:policies` to verify policy application
-* Check JSON syntax in policies.json
+* Check the JSON syntax in `policies.json`
 
 ### Extension Removed on Restart
 
@@ -283,8 +283,8 @@ When contributing or making changes, always test in both Chrome/Edge and Firefox
 
 **Solutions**:
 
-* Temporary add-ons are removed on restart - this is expected
-* For permanent installation, use enterprise deployment with signed .xpi
+* Temporary add-ons are removed on restart—this is expected
+* For permanent installation, use enterprise deployment with a signed `.xpi` file
 * Alternatively, sign the extension through Mozilla's process
 
 ### Content Scripts Not Injecting
@@ -293,9 +293,9 @@ When contributing or making changes, always test in both Chrome/Edge and Firefox
 
 **Solutions**:
 
-* Firefox doesn't support `file:///` protocol in content scripts
+* Firefox doesn't support the `file:///` protocol in content scripts
 * Ensure you're testing on `http://` or `https://` URLs
-* Check content script permissions in manifest
+* Check the content script permissions in the manifest
 
 ## Firefox Extension ID
 
