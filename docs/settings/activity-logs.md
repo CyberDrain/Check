@@ -22,7 +22,7 @@ Enables additional console logging visible in the browser's Developer Tools. Thi
 
 ### **Simulate Enterprise Policy Mode (Dev Only)**
 
-This development-only feature simulates how the extension behaves when managed by enterprise policies. Useful for administrators testing policy deployments or understanding the end-user experience under policy management.
+This development-only feature simulates how the extension behaves when managed by enterprise policies. It is useful for administrators testing policy deployments or understanding the end-user experience under policy management.
 
 ## Log Filtering and Management
 
@@ -54,17 +54,17 @@ When you open the Activity Logs section, you'll see a table with recent activity
 - **Action Taken** - What Check did about it
 - **Details** - A summary of what happened
 
-Additionally, clicking on a row will allow you to review detailed information on the event and the criteria used to make the threat level determination.
+Additionally, clicking a row allows you to review detailed information about the event and the criteria used to determine the threat level.
 
 {% hint style="info" %}
-By default, Check only logs blocked pages. If you want to show valid login pages, check `Enable Debug Logging.`
+By default, Check only logs blocked pages. If you want to show valid login pages, check `Enable Debug Logging`.
 {% endhint %}
 
 ### Understanding Common Log Entries <a href="#understanding-common-log-entries" id="understanding-common-log-entries"></a>
 
 **"Page Scanned" with Threat Level "None"**
 
-- This is normal - Check scanned a page and found it safe
+- This is normal—Check scanned a page and found it safe
 - You'll see lots of these for legitimate websites
 
 **"Threat Blocked" with Threat Level "High"**
@@ -88,7 +88,15 @@ If you think something suspicious happened:
 
 **Example Investigation:**
 
-You tried to log into Office 365 but got blocked. Looking at logs:​Timestamp: 2024-01-15 14:30:22Event Type: Threat BlockedURL: office365-login-secure.com (suspicious domain)Threat Level: HighDetails: Phishing page impersonating Microsoft loginThis shows Check correctly blocked a fake Office 365 page.
+You tried to log in to Office 365 but were blocked. The logs show:
+
+* **Timestamp:** 2024-01-15 14:30:22
+* **Event Type:** Threat Blocked
+* **URL:** office365-login-secure.com (suspicious domain)
+* **Threat Level:** High
+* **Details:** Phishing page impersonating Microsoft login
+
+This shows that Check correctly blocked a fake Office 365 page.
 
 ### Configuring Log Detail Level <a href="#configuring-log-detail-level" id="configuring-log-detail-level"></a>
 
@@ -106,10 +114,10 @@ You tried to log into Office 365 but got blocked. Looking at logs:​Timestamp: 
 4. Send logs to support (see [Common Issues](../troubleshooting/common-issues.md) for additional troubleshooting steps)
 5. Uncheck debug logging when done (saves storage space)
 
-**For admins wanting to simulate end-user experience**
+**For admins wanting to simulate the end-user experience:**
 
 1. Click "Simulate Enterprise Policy Mode (Dev Only)"
-2. Review behavior, investigate setting, grab screenshots for documentation, etc.
+2. Review behavior, investigate settings, and capture screenshots for documentation
 3. Uncheck the setting when done and refresh the page to return to normal operations
 
 ### Managing Your Log Data <a href="#managing-your-log-data" id="managing-your-log-data"></a>

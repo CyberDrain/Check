@@ -1,6 +1,6 @@
 # Branding
 
-The Branding section lets you customize how Check looks, especially useful for organizations that want consistent branding.
+The Branding section lets you customize how Check looks. This is especially useful for organizations that want consistent branding.
 
 {% hint style="info" %}
 **For individual users**
@@ -22,7 +22,7 @@ All user-facing components (suspicious login banner, blocked page, extension pop
 {% hint style="warning" %}
 **What if Settings Are Not Visible?**
 
-If some settings do not appear on your version, it means your organization's IT department has set these for you. This is normal in business environments - your IT team wants to make sure everyone has the same security settings. You will also see text indicating that the extension is being managed by policy.
+If some settings do not appear in your version, it means your organization's IT department has set them for you. This is normal in business environments—your IT team wants to make sure everyone has the same security settings. You will also see text indicating that the extension is being managed by policy.
 {% endhint %}
 
 ### Branding Properties
@@ -31,7 +31,7 @@ You can customize the following properties:
 
 1. **Company Name** - Enter your organization's name. This appears in the extension interface and blocked page messages (displayed as "Protected by \[Company Name]").
 2. **Product Name** - What you want to call the extension (like "Contoso Security" instead of "Check"). This replaces the default "Check" branding throughout the interface.
-3. **Support Email** - Where users should go for help. This email address is used in the "Contact Admin" button when phishing sites are blocked.
+3. **Support Email** - The email address users should contact for help. This address is used by the "Contact Admin" button when phishing sites are blocked.
 4. **Support URL** - URL opened by the popup **Support** link (for example, `https://support.yourcompany.com`).
 5. **Privacy Policy URL** (`privacyPolicyUrl`) - URL opened by the popup **Privacy** link (for example, `https://yourcompany.com/privacy`).
 6. **About URL** (`aboutUrl`) - URL opened by the popup **About** link. Leave empty to use the built-in extension About page.
@@ -67,7 +67,7 @@ The branding preview shows you exactly how your customizations will appear to us
    * About URL
 4. Click "Save"
 
-Your branding will be immediately applied to all components.
+Your branding will be applied immediately to all components.
 
 ### Method 2: Group Policy (GPO) - Chrome & Edge
 
@@ -131,11 +131,11 @@ For Firefox deployments, configure branding through the `policies.json` file:
 
 3. Save the file and restart Firefox
 
-**Note:** The Firefox extension ID is `check@cyberdrain.com`
+**Note:** The Firefox extension ID is `check@cyberdrain.com`.
 
 ### Method 4: Microsoft Intune - Chrome & Edge
 
-For organizations using Microsoft Intune with Chrome/Edge:
+For organizations using Microsoft Intune for Chrome and Edge:
 
 1. Create a new Configuration Profile
 2. Select "Custom" configuration
@@ -156,7 +156,7 @@ For organizations using Microsoft Intune with Chrome/Edge:
 ```
 
 4. Assign the profile to user or device groups
-5. Branding will be applied on enrolled devices
+5. Branding will be applied to enrolled devices
 
 ### Method 5: Chrome Enterprise Policy
 
@@ -200,12 +200,12 @@ Enterprise policies always take precedence over manual settings.
 
 * Use a square logo for best results
 * Ensure it looks good on both light and dark backgrounds
-* Keep it simple - small logos need to be clear
+* Keep it simple—small logos need to be clear
 
 ### **Common logo hosting options:**
 
 * Your company website: `https://yourcompany.com/logo.png`
-* Cloud storage: Upload to Google Drive, Dropbox, etc. and get a public link
+* Cloud storage: Upload to Google Drive, Dropbox, etc., and get a public link
 * Image hosting: Use services like Imgur or similar
 
 ## Browser-Specific Notes
@@ -213,12 +213,12 @@ Enterprise policies always take precedence over manual settings.
 ### Firefox
 
 * Uses extension ID: `check@cyberdrain.com`
-* Configuration is managed through `policies.json` file
+* Configuration is managed through the `policies.json` file
 * Policies file location varies by operating system
 
 ### Chrome & Edge
 
-* Configuration through GPO, Intune, or Chrome Enterprise Policy
+* Configuration is available through GPO, Intune, or Chrome Enterprise Policy
 * Uses Windows Registry for advanced configurations
 * Supports standard Chrome extension policy format
 
@@ -230,8 +230,8 @@ Enterprise policies always take precedence over manual settings.
 2. Try opening the logo URL in a new browser tab
 3. Make sure the URL starts with `https://`
 4. Verify the image file isn't too large
-5. Verify logo URLs are publicly accessible (if using external URL)
-6. Check image format (PNG, JPG, SVG supported)
+5. Verify that logo URLs are publicly accessible (if using an external URL)
+6. Check the image format (PNG, JPG, and SVG are supported)
 7. Ensure image size is reasonable
 
 ### **Colors not applying:**
