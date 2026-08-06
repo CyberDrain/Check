@@ -7,17 +7,17 @@ The extension uses a rule-driven architecture where all detection logic is defin
 * **Phishing indicators** - Patterns that detect malicious content (supports both regex and code-driven logic)
 * **Detection requirements** - Elements that identify Microsoft 365 login pages
 * **Blocking rules** - Conditions that immediately block pages
-* **Rogue apps detection** - Dynamic detection of known malicious OAuth applications
+* **Rogue app detection** - Dynamic detection of known malicious OAuth applications
 
-Each of these rules has their own schema. You can create a custom rules file and host it anywhere publicly (e.g. your own fork of Check's GitHub repo, as an Azure Blob file, etc.). By default, Check loads the CyberDrain rule set from our repository every 24 hours (configurable). Custom rules URLs must be CORS-accessible and return valid JSON matching the schema.
+Each rule type has its own schema. You can create a custom rules file and host it anywhere publicly, such as in your own fork of Check's GitHub repository or an Azure Blob. By default, Check loads the CyberDrain rule set from our repository every 24 hours (configurable). Custom rules URLs must be CORS-accessible and return valid JSON matching the schema.
 
 **Important:** After updating rules via the UI or changing custom URLs, reload any open tabs for changes to take effect on those pages. The extension loads rules at startup and on the configured interval.
 
-Contributions to our rules can be done via [https://github.com/CyberDrain/Check/blob/main/rules/detection-rules.json](https://github.com/CyberDrain/Check/blob/main/rules/detection-rules.json)
+You can contribute to our rules through [https://github.com/CyberDrain/Check/blob/main/rules/detection-rules.json](https://github.com/CyberDrain/Check/blob/main/rules/detection-rules.json).
 
 ## Rule Configuration and Updates
 
-Rules are managed by the [`DetectionRulesManager`](https://github.com/CyberDrain/Check/blob/main/scripts/modules/detection-rules-manager.js) class. It's job is to:
+Rules are managed by the [`DetectionRulesManager`](https://github.com/CyberDrain/Check/blob/main/scripts/modules/detection-rules-manager.js) class. Its job is to:
 
 * Load rules at extension startup
 * Check for updates based on the configured interval (default: 24 hours)
@@ -26,10 +26,10 @@ Rules are managed by the [`DetectionRulesManager`](https://github.com/CyberDrain
 
 **Update Process:**
 
-1. Rules are fetched from the configured URL (remote or fallback to local)
+1. Rules are fetched from the configured remote URL, with a fallback to the local file
 2. New rules are cached locally and immediately applied
 3. A message is sent to notify other extension components of the update
-4. Open tabs require reload to apply the new rules
+4. Open tabs require a reload to apply the new rules
 
 ## Exclusions
 
@@ -61,7 +61,7 @@ Use regex patterns that match the full URL:
 
 ### Trusted Domains
 
-These domains get immediate trusted status with valid badges:
+These domains receive immediate trusted status with valid badges:
 
 ```json
 "trusted_login_patterns": [
@@ -339,12 +339,12 @@ This rule triggers when:
 - Word proximity matters
 - You want to exclude certain contexts (allowlist patterns)
 - Performance is important (substring checks are faster than complex regex)
-- Rules are easier to maintain and understand
+- You want rules that are easier to maintain and understand
 
 **Use Regex When:**
 - You have a simple, single pattern to match
 - You need complex character matching
-- The pattern is already well-tested as regex
+- The pattern is already well-tested as a regex
 
 ### Pattern Properties
 
@@ -416,7 +416,7 @@ Configure what elements identify a legitimate Microsoft 365 login page:
 Check includes dynamic detection of known rogue OAuth applications that attempt to steal Microsoft 365 credentials. This feature:
 
 * Automatically fetches the latest list of rogue apps from the [Huntress Labs repository](https://github.com/huntresslabs/rogueapps)
-* Updates every 12 hours by default (configurable in `rogue_apps_detection` section)
+* Updates every 12 hours by default (configurable in the `rogue_apps_detection` section)
 * Warns users when they encounter known malicious OAuth applications
 * Caches data locally for offline protection
 

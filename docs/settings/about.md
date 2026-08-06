@@ -37,7 +37,7 @@ The About section provides quick access to essential resources:
 ### Extension Stores
 
 * [**Chrome Web Store**](https://chromewebstore.google.com/detail/benimdeioplgkhanklclahllklceahbe) - Download, rate, and review the extension for Chrome and Chromium-based browsers
-* [**Edge Add Ons Store**](https://microsoftedge.microsoft.com/addons/detail/check-by-cyberdrain/knepjpocdagponkonnbggpcnhnaikajg) - Download and rate the extension for Microsoft Edge
+* [**Microsoft Edge Add-ons**](https://microsoftedge.microsoft.com/addons/detail/check-by-cyberdrain/knepjpocdagponkonnbggpcnhnaikajg) - Download and rate the extension for Microsoft Edge
 * Firefox Add-Ons - Coming soon!
 
 ### Development and Support

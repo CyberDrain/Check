@@ -36,9 +36,9 @@ Finds domains using special characters that look similar to normal letters.
 Identifies domains based on common typing errors and keyboard slip-ups.
 
 **Examples Check catches:**
-- `micrisoft.com` → finger slipped to nearby key
+- `micrisoft.com` → finger slipped to a nearby key
 - `microssoft.com` → double-typed a letter
-- `microosft.com` → typo mixing up letters
+- `microosft.com` → transposed letters
 
 ### 4. **Suspicious Word Combination Detection**
 Spots domains that add words before or after legitimate domains to look more official.
@@ -49,7 +49,7 @@ Spots domains that add words before or after legitimate domains to look more off
 - `microsoft-auth.com`
 - `official-microsoft-support.com`
 
-Common suspicious words attackers use: `login`, `secure`, `verify`, `official`, `support`, `auth`, `signin`, `portal`
+Common suspicious words attackers use: `login`, `secure`, `verify`, `official`, `support`, `auth`, `signin`, `portal`.
 
 ## What Domains Are Protected?
 
@@ -73,12 +73,12 @@ For example, if you add `https://yourcompany.com/*` to your allowlist, Check wil
 
 When you visit a website, Check automatically:
 
-1. **Checks** if the domain looks similar to any protected domain
-2. **Analyzes** using all four detection methods
+1. **Checks** whether the domain looks similar to any protected domain
+2. **Analyzes** the domain using all four detection methods
 3. **Warns** you if it finds a suspicious match
 4. **Blocks** the page if it's clearly a phishing attempt
 
-You don't need to do anything - the protection works automatically in the background!
+You don't need to do anything—the protection works automatically in the background!
 
 ## Configuration
 
@@ -156,7 +156,7 @@ Note: Page blocking also requires "Enable Page Blocking" to be turned ON in sett
 }
 ```
 
-You can turn individual detection methods on/off. We recommend keeping all four enabled for maximum protection.
+You can turn individual detection methods on or off. We recommend keeping all four enabled for maximum protection.
 
 ## For MSPs and Enterprise IT
 
@@ -174,21 +174,22 @@ Domain squatting detection can be managed through Group Policy (GPO) or Microsof
 - Default protected domains list
 - Detection rules and patterns
 
-This separation gives you flexibility - you control the core security settings through your detection rules file, while still allowing policy-based customization for different clients or departments.
+This separation gives you flexibility: you control the core security settings through your detection rules file while still allowing policy-based customization for different clients or departments.
 
 ### Adding Organization-Specific Domains
 
 {% hint style="info" %}
-**Use the URL Allowlist!** 
+**Use the URL Allowlist!**
 
 The easiest way to protect your organization's domains is to add them to the URL Allowlist in Detection Rules settings. This automatically:
+
 1. Prevents false positives on your internal sites
 2. Protects those domains from squatting attempts
 3. Works without modifying detection rules files
 {% endhint %}
 
 **Example:** Adding `https://contoso.com/*` to your allowlist protects against fake domains like:
-- `cont0so.com` (zero instead of o)
+- `cont0so.com` (zero instead of the letter "o")
 - `contos0.com` (zero at the end)
 - `login-contoso.com` (suspicious prefix)
 
@@ -222,7 +223,7 @@ Domain squatting detection works alongside Check's other phishing protections. I
 
 ### "Settings are grayed out"
 
-If you can't see or change domain squatting settings, your IT department has configured these centrally. This is normal for managed deployments - contact your IT team if you need adjustments.
+If you can't see or change domain squatting settings, your IT department has configured these centrally. This is normal for managed deployments—contact your IT team if you need adjustments.
 
 ## Related Documentation
 

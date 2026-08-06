@@ -30,23 +30,23 @@ Before deploying Check to Firefox:
 
 1. **Firefox 109 or later** installed on target systems
 2. **Administrator/root access** for system-wide deployment
-3. **Signed extension package** (.xpi file) for production deployment
-4. **Template policies.json** from `enterprise/firefox/policies.json` in the repository
+3. **Signed extension package** (`.xpi` file) for production deployment
+4. **Template `policies.json`** from `enterprise/firefox/policies.json` in the repository
 
 ## Deployment Steps
 
 ### 1. Prepare the Extension Package
 
-For production deployment, you need a signed .xpi file:
+For production deployment, you need a signed `.xpi` file:
 
 #### Option A: Mozilla Add-ons Signing (Recommended)
 
-1.  Build the Firefox version:
+1. Build the Firefox version:
 
     ```bash
     npm run build:firefox
     ```
-2.  Package the extension:
+2. Package the extension:
 
     ```bash
     zip -r check-firefox.zip . \
@@ -65,7 +65,7 @@ For production deployment, you need a signed .xpi file:
 For testing or development:
 
 * Use temporary add-on installation (no signing required)
-* Enable unsigned extensions in Firefox developer edition
+* Enable unsigned extensions in Firefox Developer Edition
 * Not recommended for production deployments
 
 ### 2. Configure policies.json
@@ -135,12 +135,12 @@ Create or modify `policies.json` based on the template in `enterprise/firefox/po
 
 **Manual Deployment:**
 
-1.  Create the distribution folder if it doesn't exist:
+1. Create the distribution folder if it doesn't exist:
 
     ```powershell
     New-Item -ItemType Directory -Force -Path "$env:ProgramFiles\Mozilla Firefox\distribution"
     ```
-2.  Copy your configured `policies.json`:
+2. Copy your configured `policies.json`:
 
     ```powershell
     Copy-Item policies.json "$env:ProgramFiles\Mozilla Firefox\distribution\policies.json"
@@ -190,17 +190,17 @@ Write-Output "Firefox policies deployed successfully"
 
 **Manual Deployment:**
 
-1.  Create the distribution folder:
+1. Create the distribution folder:
 
     ```bash
     sudo mkdir -p "/Applications/Firefox.app/Contents/Resources/distribution"
     ```
-2.  Copy your configured `policies.json`:
+2. Copy your configured `policies.json`:
 
     ```bash
     sudo cp policies.json "/Applications/Firefox.app/Contents/Resources/distribution/policies.json"
     ```
-3.  Set appropriate permissions:
+3. Set appropriate permissions:
 
     ```bash
     sudo chmod 644 "/Applications/Firefox.app/Contents/Resources/distribution/policies.json"
@@ -246,17 +246,17 @@ Some MDM systems support Firefox configuration profiles. Check your MDM document
 
 **System-Wide Deployment:**
 
-1.  Create the policies directory:
+1. Create the policies directory:
 
     ```bash
     sudo mkdir -p /etc/firefox/policies
     ```
-2.  Copy your configured `policies.json`:
+2. Copy your configured `policies.json`:
 
     ```bash
     sudo cp policies.json /etc/firefox/policies/policies.json
     ```
-3.  Set proper permissions:
+3. Set proper permissions:
 
     ```bash
     sudo chmod 644 /etc/firefox/policies/policies.json
@@ -306,7 +306,7 @@ file { '/etc/firefox/policies/policies.json':
 
 ## Configuration Options
 
-All Check configuration options are available through the `3rdparty.Extensions` section of policies.json.
+All Check configuration options are available through the `3rdparty.Extensions` section of `policies.json`.
 
 ### Security Settings
 
@@ -401,16 +401,16 @@ After deployment, verify policies are applied:
 ### Verify Extension Installation
 
 1. Navigate to `about:addons`
-2. Confirm Check extension is installed
+2. Confirm that the Check extension is installed
 3. Verify it shows as "Managed by your organization"
 4. Check that users cannot disable or remove it (if locked)
 
 ### Test Functionality
 
 1. Visit a test phishing site
-2. Verify the extension detects and blocks/warns appropriately
+2. Verify that the extension detects the site and blocks it or displays an appropriate warning
 3. Check the extension popup for status
-4. Test branding appears correctly
+4. Verify that branding appears correctly
 
 ## Updating the Extension
 
@@ -420,7 +420,7 @@ When a new version is released:
 
 1. Build and sign the new version
 2. Upload to your distribution server
-3. Update the `install_url` in policies.json if the URL changed
+3. Update the `install_url` in `policies.json` if the URL changed
 4. Firefox will automatically update the extension based on the update manifest
 
 ### Force Immediate Update
@@ -438,7 +438,7 @@ To force an immediate update:
 
 **Check these items:**
 
-1. **File location**: Verify policies.json is in the correct path for your OS
+1. **File location**: Verify that `policies.json` is in the correct path for your OS
 2. **File permissions**: Must be readable by Firefox (644 recommended)
 3. **JSON syntax**: Validate your JSON at jsonlint.com
 4. **Firefox restart**: Policies apply on Firefox startup
@@ -448,8 +448,8 @@ To force an immediate update:
 
 **Common causes:**
 
-1. **Unsigned extension**: Production deployments require signed .xpi
-2. **Unreachable URL**: Verify the install\_url is accessible
+1. **Unsigned extension**: Production deployments require a signed `.xpi` file
+2. **Unreachable URL**: Verify that the `install_url` is accessible
 3. **Network restrictions**: Check firewall/proxy settings
 4. **Firefox version**: Ensure Firefox 109+
 
@@ -468,7 +468,7 @@ To force an immediate update:
 
 1. Extension is in the `Locked` array
 2. `installation_mode` is set to `force_installed`
-3. Policies.json was properly deployed
+3. `policies.json` was properly deployed
 4. Firefox has been restarted since deployment
 
 ## Removal
@@ -477,7 +477,7 @@ To remove the Check extension:
 
 ### Option 1: Update policies.json
 
-Remove the extension from Install and ExtensionSettings:
+Remove the extension from `Install` and `ExtensionSettings`:
 
 ```json
 {
@@ -491,7 +491,7 @@ Remove the extension from Install and ExtensionSettings:
 
 ### Option 2: Delete policies.json
 
-Remove the entire policies file (will remove all managed extensions and policies).
+Removing the entire policies file will remove all managed extensions and policies.
 
 ## Best Practices
 
@@ -499,8 +499,8 @@ Remove the entire policies file (will remove all managed extensions and policies
 2. **Version Control**: Keep policies.json in version control
 3. **Monitor Logs**: Check Firefox logs during initial deployment
 4. **Document Changes**: Record configuration changes and reasons
-5. **Update Regularly**: Keep the extension updated for latest protections
-6. **Validate JSON**: Always validate policies.json syntax before deployment
+5. **Update Regularly**: Keep the extension updated for the latest protections
+6. **Validate JSON**: Always validate `policies.json` syntax before deployment
 
 ## Support Resources
 

@@ -7,7 +7,7 @@ icon: windows
 
 # Windows
 
-There are a few different options on how you can deploy Check to Windows devices. For more information on each, please see the page:
+There are several ways to deploy Check to Windows devices. For more information about each method, see the following pages:
 
 {% content-ref url="manual-deployment.md" %}
 [manual-deployment.md](manual-deployment.md)
