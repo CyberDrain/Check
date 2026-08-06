@@ -2,12 +2,13 @@
 icon: apple
 ---
 
-# MacOS
-I'd recommend that this be deployed via your MDM if the goal is to auto-deploy it without user interaction. 
+# macOS
 
-A custom .mobileconfig file can be uploaded to most MDMs for deployment if they don't have their own Google Chrome, or Microsoft Edge profile building functionality baked-in.
+We recommend deploying Check through your MDM if the goal is to install it automatically without user interaction.
 
-Here's an example profile of the XML to create a mobileconfig that will install this in Microsoft Edge and Google Chrome. 
+A custom `.mobileconfig` file can be uploaded to most MDMs if they don't have built-in profile-building functionality for Google Chrome or Microsoft Edge.
+
+Here's an example XML profile for a mobile configuration that installs Check in Microsoft Edge and Google Chrome.
 
 ```
 <?xml version="1.0" encoding="UTF-8"?>
@@ -72,13 +73,13 @@ Here's an example profile of the XML to create a mobileconfig that will install 
 </dict>
 </plist>
 ```
-You could also deploy it in Chrome via command-line by creating the proper JSON object in the correct directory in the core /Library directory in macOS. Credit to @cezaraugusto for the script (slightly modified to simply install 'Check' if no parameter is passed...though technically you could pass any other Chrome extension ID after the script path and it would install that extension). 
+You could also deploy it in Chrome from the command line by creating the appropriate JSON object in the correct location under the core `/Library` directory in macOS. Credit goes to @cezaraugusto for the script, which was slightly modified to install Check when no parameter is passed. You can also pass another Chrome extension ID after the script path to install that extension.
 
 ```
 #!/bin/bash
 
 # https://developer.chrome.com/docs/extensions/mv3/external_extensions/#preferences
-# Credit to #cezaraugusto# from GithubGist for this script...slightly modified for the purposes of installing Check by Cyberdrain if no parameter is passed
+# Credit to #cezaraugusto# from GitHub Gist for this script, slightly modified to install Check by CyberDrain if no parameter is passed
 # https://gist.github.com/cezaraugusto
 # https://gist.github.com/cezaraugusto/0101d2cb251c088f398ca0f8d4495ca0
 
@@ -111,19 +112,15 @@ fi
 
 install_chrome_extension "$extension"
 
-# Usage: 
+# Usage:
 # ./install_extension.sh <extension_id>
-# Sample: adding React Dev Tools from command-line to Chrome 
+# Sample: adding React Dev Tools from the command line to Chrome
 # ./install_extension.sh fmkadmapgofadopljbjfkapdkoienihi
 ```
 
-This would not install the extension until the next time Chrome is launched, and then it will require the user to approve it. 
+This does not install the extension until the next time Chrome is launched. The user will then be required to approve it.
 
 <img width="448" height="330" alt="SCR-20260520-krbi" src="https://github.com/user-attachments/assets/f53a13fe-c16b-4941-aa39-0799b2b32b6e" />
+Due to limitations like this, it is better to deploy the extension through an MDM.
 
-
-
-Due to limitations like this it really would be better to push it via an MDM. 
-
-
-If you have experience deploying managed MacOS browser extensions, please contribute to the [docs via GitHub](https://github.com/CyberDrain/Check/tree/dev/docs). All Mac resources in the GitHub repo should be considered inaccurate until tested.&#x20;
+If you have experience deploying managed macOS browser extensions, please contribute to the [docs via GitHub](https://github.com/CyberDrain/Check/tree/dev/docs). All macOS resources in the GitHub repo should be considered inaccurate until tested.

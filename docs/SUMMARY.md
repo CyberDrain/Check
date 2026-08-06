@@ -14,7 +14,7 @@
     - [Manual Deployment](deployment/chrome-edge-deployment-instructions/windows/manual-deployment.md)
     - [Domain Deployment](deployment/chrome-edge-deployment-instructions/windows/domain-deployment.md)
     - [RMM Deployment](deployment/chrome-edge-deployment-instructions/windows/rmm-deployment.md)
-  - [MacOS](deployment/chrome-edge-deployment-instructions/macos.md)
+  - [macOS](deployment/chrome-edge-deployment-instructions/macos.md)
 - [Firefox Deployment](deployment/firefox-deployment.md)
 
 ## Removal

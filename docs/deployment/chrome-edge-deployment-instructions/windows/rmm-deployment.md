@@ -6,13 +6,13 @@ description: >-
 
 # RMM Deployment
 
-Review the below options for how to deploy Check to Windows devices via RMM. If you use a RMM not featured, please see the script in [#powershell](manual-deployment.md#powershell "mention") to script the install.
+Review the following options for deploying Check to Windows devices through an RMM. If you use an RMM that is not listed, see the script in [#powershell](manual-deployment.md#powershell "mention") to automate the installation.
 
 <details>
 
 <summary>Action1</summary>
 
-For Action1, you can use the script in [#powershell](manual-deployment.md#powershell "mention") to create a ps1 file and deploy it via a [custom package in the software repository](https://www.action1.com/documentation/add-custom-packages-to-app-store/) or via the [script library](https://www.action1.com/documentation/script-library/).
+For Action1, you can save the script in [#powershell](manual-deployment.md#powershell "mention") as a `.ps1` file and deploy it through a [custom package in the software repository](https://www.action1.com/documentation/add-custom-packages-to-app-store/) or the [script library](https://www.action1.com/documentation/script-library/).
 
 </details>
 
@@ -20,7 +20,7 @@ For Action1, you can use the script in [#powershell](manual-deployment.md#powers
 
 <summary>Acronis RMM</summary>
 
-For Acronis RMM, you can use the script in [#powershell](manual-deployment.md#powershell "mention") to [create a script in the Script repository](https://www.acronis.com/en-us/support/documentation/CyberProtectionService/#cyber-scripting-creating-script.html) and then running the script via a [Script Plan](https://www.acronis.com/en-us/support/documentation/CyberProtectionService/#cyber-scripting-scripting-plans.html).
+For Acronis RMM, you can use the script in [#powershell](manual-deployment.md#powershell "mention") to [create a script in the Script repository](https://www.acronis.com/en-us/support/documentation/CyberProtectionService/#cyber-scripting-creating-script.html) and then run it through a [Script Plan](https://www.acronis.com/en-us/support/documentation/CyberProtectionService/#cyber-scripting-scripting-plans.html).
 
 </details>
 
@@ -32,7 +32,7 @@ For Acronis RMM, you can use the script in [#powershell](manual-deployment.md#po
 2. Create a new script
 3. Add a PowerShell Execute Script step
 4. Copy in the [#powershell](manual-deployment.md#powershell "mention") script.
-5. Save and assign the script to your targetted devices.
+5. Save and assign the script to your targeted devices.
 
 </details>
 
@@ -57,7 +57,7 @@ For Acronis RMM, you can use the script in [#powershell](manual-deployment.md#po
 <summary>ImmyBot</summary>
 
 ImmyBot includes a pre-built Global Computer Task for Check browser extension deployment.\
-Due to how flexible Immy is, this may look intimidating at first, but it is quite easy and nearly purely UI-driven!\
+Due to Immy's flexibility, this may look intimidating at first, but the process is straightforward and almost entirely UI-driven.\
 Follow these steps to deploy Check using ImmyBot:
 
 **Step 1: Create a Deployment**
@@ -90,11 +90,11 @@ Follow these steps to deploy Check using ImmyBot:
 1. Click **Create** to save the deployment
 2. **Run a Maintenance Session** to apply the deployment:
    * Navigate to the target computers
-   * Initiate maintenance session to execute deployments
+   * Initiate a maintenance session to execute deployments
 3. **Monitor Results** through ImmyBot's maintenance session logs
 4. Review deployment status and address any failures
 
-**Best Practices for** ImmyBot **Deployment**
+**Best Practices for ImmyBot Deployment**
 
 * **Test First**: Create a test deployment targeting a small group before rolling out globally
 * **Use Targeting**: Leverage Immy's advanced targeting to deploy based on computer properties, user assignments, or custom criteria
@@ -110,7 +110,7 @@ For detailed information about Immy deployments, tasks, and maintenance sessions
 <summary>Kaseya VSA</summary>
 
 1. Go to **Agent Procedures** → **Installer Wizards** → **Application Deploy**
-2. Upload a .ps1 of the [#powershell](manual-deployment.md#powershell "mention") script
+2. Upload the [#powershell](manual-deployment.md#powershell "mention") script as a `.ps1` file
 3. Choose Private or Shared Files
 4. Select installer type
 5. Add command-line options
@@ -137,7 +137,7 @@ For detailed information about Immy deployments, tasks, and maintenance sessions
 10. Click **Distribute**
 
 {% hint style="warning" %}
-ManageEngine's documentation is not clear how to manage the settings for the extension via this method. It may be necessary to transition to scripted deployment.
+ManageEngine's documentation is not clear about how to manage the extension settings through this method. It may be necessary to transition to scripted deployment.
 {% endhint %}
 
 </details>
@@ -151,7 +151,7 @@ ManageEngine's documentation is not clear how to manage the settings for the ext
 3. Choose:
    1. Script Type: **PowerShell**
    2. Operating System: **Windows**
-4. Upload a .ps1 of the [#powershell](manual-deployment.md#powershell "mention") script or paste the script directly
+4. Upload the [#powershell](manual-deployment.md#powershell "mention") script as a `.ps1` file or paste the script directly
 5. Name the script `Check Browser Extension Deployment`
 6. Save the script
 7. Go to **Configuration** → **Scheduled Task** → **Add Task**
@@ -160,7 +160,7 @@ ManageEngine's documentation is not clear how to manage the settings for the ext
 10. Configure the task
     1. Name: **Check Browser Extension Deployment**
     2. Target Devices: Choose specific devices, groups, or filters
-    3. Schedule: Set to your desired interval. We recommend on login/startup for best results but a lower frequency can also ensure deployment to all macines
+    3. Schedule: Set your desired interval. We recommend running on login or startup for the best results, but a lower frequency can also ensure deployment to all machines
     4. Execution Context: **System Account**
 11. Click **Save and Activate**
 
@@ -174,15 +174,15 @@ ManageEngine's documentation is not clear how to manage the settings for the ext
 2. Click **New**
 3. Enter `Check Browser Extension Deployment` for the name and a brief description
 4. Set a timeout period for the script of 600 seconds
-5. Upload a .ps1 file of the [#powershell](manual-deployment.md#powershell "mention") script leaving `Script check and automated task` selected
+5. Upload the [#powershell](manual-deployment.md#powershell "mention") script as a `.ps1` file, leaving `Script check and automated task` selected
 6. Click **Save**
 7. On the **All Devices** view, right-click your targeted Client or Site
 8. Select **Task** → **Add**
 9. Select the script you just uploaded
-10. Enter a name for the task, e.g. `<Client/Site> Check Browser Extension Deployment`
+10. Enter a name for the task, e.g., `<Client/Site> Check Browser Extension Deployment`
 11. Select `Once per day` for the frequency method
 12. Set a **Start Date**, **Start Time**, **End Date**, and **End Time** as desired
-13. Set a maximum permitted execution time e.g. 600 seconds
+13. Set a maximum permitted execution time, e.g., 600 seconds
 14. Set `Run task as soon as possible if schedule is missed`
 15. Select **Next**
 16. Select the targeted devices and click **Add Task**
@@ -195,24 +195,24 @@ ManageEngine's documentation is not clear how to manage the settings for the ext
 
 1. Go to **Administration** → **Library** → **Automation** → **Add** → **New Script**
 
-1) Enter:
+1. Enter:
    1. Name `Check Browser Extension Deployment`
    2. Description: To deploy Check by CyberDrain for Edge and Chrome
-   3. Categories: Select as approriate for your environment
+   3. Categories: Select as appropriate for your environment
    4. Language: PowerShell
    5. Operating System: Windows
-   6. Architechture: All
+   6. Architecture: All
    7. Run As: System
    8. Script Variables: Add as desired to customize
-2) Copy the [#powershell](manual-deployment.md#powershell "mention") script into the editor
-3) Click **Save**
-4) Go to **Administration** → **Policies**
-5) Options are to create a new policy or add the automation to an existing policy targeting Windows devices
-6) Select **Scheduled Automation** on the left
-7) Click **Add a Scheduled automation** button
-8) Select the script and set the options for frequency, add variables, etc.
-9) Click **Add**
-10) Click **Save**
+2. Copy the [#powershell](manual-deployment.md#powershell "mention") script into the editor
+3. Click **Save**
+4. Go to **Administration** → **Policies**
+5. Create a new policy or add the automation to an existing policy that targets Windows devices
+6. Select **Scheduled Automation** on the left
+7. Click **Add a Scheduled automation** button
+8. Select the script and set the options for frequency, add variables, etc.
+9. Click **Add**
+10. Click **Save**
 
 </details>
 
@@ -243,14 +243,14 @@ ManageEngine's documentation is not clear how to manage the settings for the ext
 <summary>SuperOps.ai</summary>
 
 1. Navigate to **Modules** → **Scripts**
-2. Click **+ Scrip**t
-3. Name the script `Check Browser Extension Depoloyment`
+2. Click **+ Script**
+3. Name the script `Check Browser Extension Deployment`
 4. Choose **PowerShell** as the language
 5. Paste the [#powershell](manual-deployment.md#powershell "mention") script
 6. Set a timeout of 600 seconds
 7. Choose to run as **System/Root User**
 8. Save the script
-9. SuperOps has multiple ways to deploy a scheduled action. Please review their documentation for your preferred method
+9. SuperOps has multiple ways to deploy a scheduled action. Review its documentation to choose your preferred method.
 
 </details>
 
@@ -268,10 +268,10 @@ ManageEngine's documentation is not clear how to manage the settings for the ext
 8. Navigate to **Policies**
 9. Click **+New Policy**
 10. Name the policy `Check Browser Extension Deployment`
-11. Choose **Scripting** policy category
+11. Choose the **Scripting** policy category
 12. Click **+Add Entry**
-13. Select the script you just created from the drop down
-14. Select your desired frequency. We recommend at least daily
+13. Select the script you just created from the drop-down list
+14. Select your desired frequency. We recommend running it at least daily.
 15. Click **Save Policy**
 
 </details>
