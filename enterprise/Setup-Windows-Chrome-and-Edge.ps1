@@ -227,7 +227,7 @@ $replacements = @(
     @{ Pattern = '$cippTenantId = "" #';             Value = "`$cippTenantId = $(Format-SingleQuoted $cfg_cippTenantId) #" }
     @{ Pattern = '$customRulesUrl = "" #';           Value = "`$customRulesUrl = $(Format-SingleQuoted $cfg_customRulesUrl) #" }
     @{ Pattern = '$updateInterval = 24 #';           Value = "`$updateInterval = $cfg_updateInterval #" }
-    @{ Pattern = '$domainSquattingEnabled = 1 #';    Value = "`$domainSquattingEnabled = $cfg_domainSquattingEnabled #" }
+    @{ Pattern = '$domainSquattingEnabled = 0 #';    Value = "`$domainSquattingEnabled = $cfg_domainSquattingEnabled #" }
     @{ Pattern = '$enableDebugLogging = 0 #';        Value = "`$enableDebugLogging = $cfg_enableDebugLogging #" }
     @{ Pattern = '$enableGenericWebhook = 0 #';      Value = "`$enableGenericWebhook = $cfg_enableGenericWebhook #" }
     @{ Pattern = '$webhookUrl = "" #';               Value = "`$webhookUrl = $(Format-SingleQuoted $cfg_webhookUrl) #" }

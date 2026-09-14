@@ -8,11 +8,11 @@ description: This is where you control the main features of Check.
 
 ### **Enable Page Blocking**
 
-This is Check's main job - blocking dangerous websites. When this is turned on (which we recommend), Check will stop you from visiting fake Microsoft login pages and show you a warning instead. There are times you need to disable the checkbox for testing purposes. Removing this checkbox removes most of your protection so it's recommended to leave this setting enabled.
+This is Check's main job—blocking dangerous websites. When this setting is enabled, which we recommend, Check will stop you from visiting fake Microsoft login pages and show you a warning instead. You may need to disable it temporarily for testing. Disabling page blocking removes most of your protection, so we recommend leaving this setting enabled.
 
 ### Enable CIPP Reporting
 
-CIPP is a system that IT professionals use to monitor security across multiple organizations. Enabling CIPP monitoring allows you to send detection information from Check directly to CIPP, thus allowing you to alert and report on what's happening with your endpoints. When enabled, you would configure the CIPP Server URL and Tenant ID/Domain below.
+CIPP is a system that IT professionals use to monitor security across multiple organizations. Enabling CIPP monitoring allows you to send detection information from Check directly to CIPP, allowing you to alert and report on what's happening with your endpoints. When enabled, configure the CIPP Server URL and Tenant ID/Domain below.
 
 View CIPP reporting activity in the [Activity Logs](activity-logs.md) section.
 
@@ -56,7 +56,7 @@ Your webhook endpoint will receive a POST request with `Content-Type: applicatio
 - `platform` - Operating system (e.g., "Linux x86_64", "Win32", "MacIntel")
 - `language` - Browser language setting (e.g., "en-US")
 - `vendor` - Browser vendor (e.g., "Google Inc.")
-- `cookiesEnabled` - Boolean indicating if cookies are enabled
+- `cookiesEnabled` - Boolean indicating whether cookies are enabled
 - `onLine` - Boolean indicating network connectivity status
 
 **screenResolution object:**
@@ -68,14 +68,14 @@ Your webhook endpoint will receive a POST request with `Content-Type: applicatio
 
 **detectionDetails object:**
 - `url` - Original URL (non-defanged)
-- `score` - Legitimacy score assigned by detection engine
+- `score` - Legitimacy score assigned by the detection engine
 - `threshold` - Threshold value that triggered the block
 - `reason` - Detailed technical reason for blocking
 - `pageTitle` - Title of the blocked page
 - `timestamp` - When the page was blocked
 - `threats` - Array of threat objects with `id`, `type`, `description`, and `severity`
 - `phishingIndicators` - Array of specific indicators that triggered detection
-- Additional fields depending on detection method used
+- Additional fields depending on the detection method used
 
 #### Complete Payload Example
 
@@ -147,6 +147,7 @@ Your webhook endpoint will receive a POST request with `Content-Type: applicatio
 #### Webhook Requirements
 
 Your webhook endpoint should:
+
 1. Accept POST requests with `Content-Type: application/json`
 2. Respond with HTTP status codes:
    - `200 OK` - Report successfully received
@@ -165,7 +166,7 @@ Your webhook endpoint should:
 
 ### **Show Notifications**
 
-When Check blocks a dangerous website or finds something suspicious, it can show you a small popup message to let you know what's going on. We recommend leaving this setting enabled
+When Check blocks a dangerous website or finds something suspicious, it can show you a small popup message to let you know what's going on. We recommend leaving this setting enabled.
 
 ### **Show Valid Page Badge**
 
@@ -173,7 +174,7 @@ This adds a small green checkmark to real Microsoft login pages. This feature is
 
 ### **Valid Page Badge Timeout**
 
-This setting controls how long the "Verified Microsoft Domain" badge stays visible on legitimate Microsoft login pages before automatically dismissing.
+This setting controls how long the "Verified Microsoft Domain" badge stays visible on legitimate Microsoft login pages before it is automatically dismissed.
 
 - **Set to 0**: Badge stays visible until you manually dismiss it (no timeout)
 - **Set to 1-300 seconds**: Badge automatically disappears after the specified number of seconds
@@ -184,5 +185,5 @@ This allows you to customize the badge experience based on your preferences. If 
 {% hint style="warning" %}
 #### What if Settings Are Not Visible?
 
-If some settings do not appear on my version, it means your organization's IT department has set these for you. This is normal in business environments - your IT team wants to make sure everyone has the same security settings. You will also see text indicating that the extension is being managed by policy.
+If some settings do not appear in your version, it means your organization's IT department has set them for you. This is normal in business environments—your IT team wants to make sure everyone has the same security settings. You will also see text indicating that the extension is being managed by policy.
 {% endhint %}

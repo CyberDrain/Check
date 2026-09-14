@@ -2,7 +2,7 @@
 
 {% tabs %}
 {% tab title="Intune" %}
-The simplest method of Intune deployment is via a win32 script. Follow the steps below to deploy Check with Intune.
+The simplest method of Intune deployment is through a Win32 script. Follow the steps below to deploy Check with Intune.
 
 ***
 
@@ -16,7 +16,7 @@ The simplest method of Intune deployment is via a win32 script. Follow the steps
    1. Deploy-Windows-Chrome-and-Edge.ps1
    2. Remove-Windows-Chrome-and-Edge.ps1
    3. Detect-Windows-Chrome-and-Edge.ps1
-3. You will be prompted during the Setup script on how you want to configure Check. Follow the script's guidance to ensure you're accurately entering values for the script. These values will be used for both the Deploy and Detect to ensure the extension is properly deployed.
+3. The setup script will prompt you to configure Check. Follow its guidance to ensure that you enter each value accurately. These values will be used by both the deployment and detection scripts to verify that the extension is properly deployed.
 4. Set the output location the script will use to generate the three new scripts.
 
 {% hint style="info" %}
@@ -97,7 +97,7 @@ Keep **Run script as 32-bit process on 64-bit clients** set to **No** so the det
 
 ### Updating Settings
 
-When you need to change extension settings (e.g., enable page blocking, update branding):
+When you need to change extension settings (e.g., enable page blocking or update branding):
 
 1. Re-run the setup script with new values, or manually edit the config blocks in both `Deploy-` and `Detect-` scripts
 2. Re-package with `IntuneWinAppUtil.exe`
@@ -120,20 +120,19 @@ To remove the extension from managed devices:
 {% endtab %}
 
 {% tab title="Group Policy" %}
-1. Download the following from the Check repo on GitHub
+1. Download the following files from the Check repository on GitHub:
    1. ​[Deploy-ADMX.ps1](https://github.com/CyberDrain/Check/blob/main/enterprise/Deploy-ADMX.ps1)
    2. ​[Check-Extension.admx](https://github.com/CyberDrain/Check/blob/main/enterprise/admx/Check-Extension.admx)​
    3. ​[Check-Extension.adml](https://github.com/CyberDrain/Check/blob/main/enterprise/admx/en-US/Check-Extension.adml)​
-2. Run Deploy-ADMX.ps1. As long as you keep the other two files in the same folder, it will correctly add the available objects to Group Policy.
-3. Open Group Policy and create a policy using the imported settings that can be found at `Computer Configuration → Policies → Administrative Templates → CyberDrain → Check - Microsoft 365 Phishing Protection`
+2. Run `Deploy-ADMX.ps1`. As long as you keep the other two files in the same folder, it will correctly add the available objects to Group Policy.
+3. Open Group Policy and create a policy using the imported settings at `Computer Configuration → Policies → Administrative Templates → CyberDrain → Check - Microsoft 365 Phishing Protection`.
 
 ![](<../../../.gitbook/assets/image (2).png>)
 {% endtab %}
 
 {% tab title="CIPP Standard" %}
-You can use a CIPP standard to deploy Check. It works the same way that the [#intune](domain-deployment.md#intune "mention") instructions do but CIPP handles all the work for install and detection script building.
+You can use a CIPP standard to deploy Check. It works the same way as the [#intune](domain-deployment.md#intune "mention") instructions, but CIPP handles the installation and detection-script creation.
 
 For more, see our [Standards documentation](https://standards.cipp.app/standards/deploycheckchromeextension).
 {% endtab %}
 {% endtabs %}
-
