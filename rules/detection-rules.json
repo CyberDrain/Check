@@ -73,7 +73,8 @@
       "^https://[^/]*\\.plumsail\\.com(/.*)?$",
       "^https://[^/]*\\.app\\.vyond\\.com(/.*)?$",
       "^https:\\/\\/[^/]*\\.zoho\\.com(/.*)?$",
-      "^https:\\/\\/[^/]*\\.zoho\\.com\\.au(/.*)?$"
+      "^https:\\/\\/[^/]*\\.zoho\\.com\\.au(/.*)?$",
+      "^https:\\/\\/[^/]*\\.nine\\.com\\.au(/.*)?$"
     ],
     "context_indicators": {
       "description": "Additional context that indicates legitimate discussion vs phishing",
