@@ -82,6 +82,7 @@ Sometimes you need to update rules immediately:
    * Go to the Detection Rules section
    * Click "Update Rules Now"
    * Wait for the "Rules updated successfully" message
+   * If the update fails, you'll see an error message. Check keeps using your current rules, so protection continues while you fix the problem
 
 ## Understanding the Configuration Overview
 
@@ -115,6 +116,8 @@ If some settings do not appear in your version, it means your organization's IT 
 ## Troubleshooting Rule Updates
 
 ### **Problem: Rules won't update**
+
+If an update fails, Check keeps using the last rules it downloaded successfully and tries again later, so you stay protected with the most recent rules it has.
 
 1. Check your internet connection
 2. Try clicking "Update Rules Now" again
