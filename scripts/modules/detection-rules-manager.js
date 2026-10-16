@@ -6,6 +6,43 @@
 import { chrome, storage } from "../browser-polyfill.js";
 import logger from "../utils/logger.js";
 
+// Top-level sections of a rules file. A downloaded file must contain at least
+// one of them, so an error page or unrelated JSON response can't replace good
+// rules.
+const KNOWN_RULE_SECTIONS = [
+  "trusted_login_patterns",
+  "microsoft_domain_patterns",
+  "exclusion_system",
+  "legitimate_discussion_domains",
+  "m365_detection_requirements",
+  "blocking_rules",
+  "allow_rules",
+  "aad_detection_elements",
+  "required_elements",
+  "rules",
+  "thresholds",
+  "phishing_indicators",
+  "legitimate_patterns",
+  "suspicious_behaviors",
+  "detection_settings",
+  "detection_logic",
+  "rogue_apps_detection",
+  "domain_squatting",
+];
+
+// After a failed fetch, wait this long before trying again so an outage or
+// rate limit doesn't cause a request on every page load.
+const FAILED_FETCH_RETRY_DELAY = 5 * 60 * 1000;
+
+function isValidDetectionRules(rules) {
+  if (!rules || typeof rules !== "object" || Array.isArray(rules)) {
+    return false;
+  }
+  return KNOWN_RULE_SECTIONS.some((section) =>
+    Object.prototype.hasOwnProperty.call(rules, section)
+  );
+}
+
 export class DetectionRulesManager {
   constructor(configManager = null, onRulesUpdated = null) {
     this.cachedRules = null;
@@ -21,6 +58,8 @@ export class DetectionRulesManager {
     this.onRulesUpdated = onRulesUpdated;
     this._refreshInFlight = null;
     this._usingFallback = false;
+    this._lastFetchError = null;
+    this._lastFailedFetchAt = 0;
   }
 
   async initialize() {
@@ -102,19 +141,15 @@ export class DetectionRulesManager {
       const result = await storage.local.get([this.cacheKey]);
       const cached = result?.[this.cacheKey];
 
-      if (cached && cached.rules && cached.lastUpdate) {
-        // Check if cache is still valid
-        const now = Date.now();
-        const cacheAge = now - cached.lastUpdate;
-
-        if (cacheAge < this.updateInterval) {
-          this.cachedRules = cached.rules;
-          this.lastUpdate = cached.lastUpdate;
-          logger.log("Detection rules loaded from cache");
-          return true;
-        } else {
-          logger.log("Cached detection rules expired, will fetch new ones");
-        }
+      // The cache only holds rules from a successful remote fetch, so use it
+      // even when it's past the update interval: it's the newest copy we
+      // have. lastUpdate keeps its age, so a refresh is still triggered.
+      if (cached && cached.lastUpdate && isValidDetectionRules(cached.rules)) {
+        this.cachedRules = cached.rules;
+        this.lastUpdate = cached.lastUpdate;
+        this._usingFallback = false;
+        logger.log("Detection rules loaded from cache");
+        return true;
       }
 
       return false;
@@ -144,6 +179,7 @@ export class DetectionRulesManager {
 
   async fetchDetectionRules() {
     let rules = null;
+    this._lastFetchError = null;
 
     // Try to fetch from remote URL first
     if (this.remoteUrl && this.remoteUrl !== this.fallbackUrl) {
@@ -162,22 +198,42 @@ export class DetectionRulesManager {
         }
 
         rules = await response.json();
+        if (!isValidDetectionRules(rules)) {
+          throw new Error("Response is not a valid detection rules file");
+        }
         logger.log("Successfully fetched detection rules from remote URL");
 
         // Persist only successful remote fetches so the cache always reflects
         // the true remote state - never poisoned by bundled fallback content.
         this._usingFallback = false;
+        this._lastFailedFetchAt = 0;
         await this.saveToCache(rules);
         return rules;
       } catch (error) {
         logger.warn("Failed to fetch rules from remote URL:", error.message);
+        this._lastFetchError = error.message;
+        this._lastFailedFetchAt = Date.now();
+      }
+
+      // Keep the last successfully downloaded rules rather than falling back
+      // to the bundled ones, which may be several releases older. lastUpdate
+      // is left unchanged so the next refresh retries the remote URL.
+      const hasDownloadedRules =
+        (this.cachedRules && !this._usingFallback && this.lastUpdate > 0) ||
+        (await this.loadFromCache());
+      if (hasDownloadedRules) {
+        logger.warn(
+          "Keeping previously downloaded detection rules until the remote URL is reachable"
+        );
+        return this.cachedRules;
       }
     }
 
-    // Remote fetch failed (or no remote URL configured): serve the bundled
-    // rules in-memory but DO NOT persist them. lastUpdate stays at 0 so the
-    // next getDetectionRules() call treats the cache as stale and retries the
-    // remote URL - the persistent cache remains a record of remote-only state.
+    // No previously downloaded rules (or no remote URL configured): serve the
+    // bundled rules in-memory but DO NOT persist them. lastUpdate stays at 0 so
+    // the next getDetectionRules() call treats the cache as stale and retries
+    // the remote URL - the persistent cache remains a record of remote-only
+    // state.
     try {
       logger.log(
         "Falling back to bundled detection rules (in-memory only; will retry remote on next refresh)"
@@ -283,11 +339,19 @@ export class DetectionRulesManager {
       // Cache is past the configured refresh interval. Return the (still usable)
       // cached rules immediately so page detection isn't blocked, and kick off
       // a non-blocking remote refresh whose result lands on the NEXT request.
-      this._scheduleBackgroundRefresh(
-        `cache age ${Math.round(cacheAge / 60000)}m > interval ${Math.round(
-          this.updateInterval / 60000
-        )}m`
-      );
+      if (!this._isInFailureBackoff(now)) {
+        this._scheduleBackgroundRefresh(
+          `cache age ${Math.round(cacheAge / 60000)}m > interval ${Math.round(
+            this.updateInterval / 60000
+          )}m`
+        );
+      }
+      return this.cachedRules;
+    }
+
+    // Running on bundled rules after a recent failure: don't block on another
+    // network attempt until the retry delay has passed.
+    if (this.cachedRules && this._isInFailureBackoff(now)) {
       return this.cachedRules;
     }
 
@@ -304,10 +368,29 @@ export class DetectionRulesManager {
     }
   }
 
+  _isInFailureBackoff(now) {
+    return (
+      this._lastFailedFetchAt > 0 &&
+      now - this._lastFailedFetchAt <
+        Math.min(FAILED_FETCH_RETRY_DELAY, this.updateInterval)
+    );
+  }
+
   async forceUpdate() {
     logger.log("Forcing detection rules update");
     await this.reloadConfiguration();
-    return await this.updateDetectionRules();
+    const rules = await this.updateDetectionRules();
+
+    // Report a failed download instead of claiming success. The previous
+    // rules stay in use.
+    if (this._lastFetchError) {
+      throw new Error(
+        `Could not download detection rules (${this._lastFetchError}). Still using ${
+          this._usingFallback ? "the bundled rules" : "the previously downloaded rules"
+        }.`
+      );
+    }
+    return rules;
   }
 
   getCacheInfo() {
