@@ -78,6 +78,16 @@ export class DetectionRulesManager {
         .catch(() => ({}));
       this._lastFailedFetchAt = stored?.[FAILED_FETCH_KEY] || 0;
 
+      if (!this.cachedRules && this._isInFailureBackoff(Date.now())) {
+        const response = await fetch(this.fallbackUrl);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        this.cachedRules = await response.json();
+        this.lastUpdate = 0;
+        this._usingFallback = true;
+      }
+
       // Check if we need to update
       const now = Date.now();
       if (
