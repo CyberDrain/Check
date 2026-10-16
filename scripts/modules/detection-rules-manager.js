@@ -32,7 +32,9 @@ const KNOWN_RULE_SECTIONS = [
 
 // After a failed fetch, wait this long before trying again so an outage or
 // rate limit doesn't cause a request on every page load.
+// The failure time is persisted so the delay survives service worker restarts.
 const FAILED_FETCH_RETRY_DELAY = 5 * 60 * 1000;
+const FAILED_FETCH_KEY = "detection_rules_last_failed_fetch";
 
 function isValidDetectionRules(rules) {
   if (!rules || typeof rules !== "object" || Array.isArray(rules)) {
@@ -58,7 +60,6 @@ export class DetectionRulesManager {
     this.onRulesUpdated = onRulesUpdated;
     this._refreshInFlight = null;
     this._usingFallback = false;
-    this._lastFetchError = null;
     this._lastFailedFetchAt = 0;
   }
 
@@ -72,9 +73,17 @@ export class DetectionRulesManager {
       // Load cached rules first
       await this.loadFromCache();
 
+      const stored = await storage.local
+        .get([FAILED_FETCH_KEY])
+        .catch(() => ({}));
+      this._lastFailedFetchAt = stored?.[FAILED_FETCH_KEY] || 0;
+
       // Check if we need to update
       const now = Date.now();
-      if (now - this.lastUpdate > this.updateInterval) {
+      if (
+        now - this.lastUpdate > this.updateInterval &&
+        !this._isInFailureBackoff(now)
+      ) {
         // Update in background
         this.updateDetectionRules().catch((error) => {
           logger.warn(
@@ -177,9 +186,13 @@ export class DetectionRulesManager {
     }
   }
 
-  async fetchDetectionRules() {
+  /**
+   * @param {object} [outcome] Receives `error` if the remote fetch failed and
+   *   `usingBundled` if the bundled rules were returned, so a caller can tell
+   *   how its own fetch went even if other fetches overlap with it.
+   */
+  async fetchDetectionRules(outcome = {}) {
     let rules = null;
-    this._lastFetchError = null;
 
     // Try to fetch from remote URL first
     if (this.remoteUrl && this.remoteUrl !== this.fallbackUrl) {
@@ -206,13 +219,15 @@ export class DetectionRulesManager {
         // Persist only successful remote fetches so the cache always reflects
         // the true remote state - never poisoned by bundled fallback content.
         this._usingFallback = false;
-        this._lastFailedFetchAt = 0;
+        if (this._lastFailedFetchAt) {
+          await this._setLastFailedFetchAt(0);
+        }
         await this.saveToCache(rules);
         return rules;
       } catch (error) {
         logger.warn("Failed to fetch rules from remote URL:", error.message);
-        this._lastFetchError = error.message;
-        this._lastFailedFetchAt = Date.now();
+        outcome.error = error.message;
+        await this._setLastFailedFetchAt(Date.now());
       }
 
       // Keep the last successfully downloaded rules rather than falling back
@@ -250,6 +265,7 @@ export class DetectionRulesManager {
       this.cachedRules = rules;
       this.lastUpdate = 0; // Force next access to re-attempt the remote fetch
       this._usingFallback = true;
+      outcome.usingBundled = true;
       return rules;
     } catch (error) {
       logger.error("Failed to load bundled detection rules:", error.message);
@@ -257,9 +273,9 @@ export class DetectionRulesManager {
     }
   }
 
-  async updateDetectionRules() {
+  async updateDetectionRules(outcome = {}) {
     try {
-      const rules = await this.fetchDetectionRules();
+      const rules = await this.fetchDetectionRules(outcome);
 
       // Notify the background-script wiring so dependent subsystems (e.g. the
       // domain-squatting detector) can re-initialize with the new rules.
@@ -369,24 +385,39 @@ export class DetectionRulesManager {
   }
 
   _isInFailureBackoff(now) {
+    const elapsed = now - this._lastFailedFetchAt;
     return (
       this._lastFailedFetchAt > 0 &&
-      now - this._lastFailedFetchAt <
-        Math.min(FAILED_FETCH_RETRY_DELAY, this.updateInterval)
+      elapsed >= 0 &&
+      elapsed < Math.min(FAILED_FETCH_RETRY_DELAY, this.updateInterval)
     );
+  }
+
+  async _setLastFailedFetchAt(timestamp) {
+    this._lastFailedFetchAt = timestamp;
+    try {
+      if (timestamp) {
+        await storage.local.set({ [FAILED_FETCH_KEY]: timestamp });
+      } else {
+        await storage.local.remove([FAILED_FETCH_KEY]);
+      }
+    } catch (error) {
+      logger.warn("Failed to save detection rules retry state:", error.message);
+    }
   }
 
   async forceUpdate() {
     logger.log("Forcing detection rules update");
     await this.reloadConfiguration();
-    const rules = await this.updateDetectionRules();
+    const outcome = {};
+    const rules = await this.updateDetectionRules(outcome);
 
     // Report a failed download instead of claiming success. The previous
     // rules stay in use.
-    if (this._lastFetchError) {
+    if (outcome.error) {
       throw new Error(
-        `Could not download detection rules (${this._lastFetchError}). Still using ${
-          this._usingFallback ? "the bundled rules" : "the previously downloaded rules"
+        `Could not download detection rules (${outcome.error}). Still using ${
+          outcome.usingBundled ? "the bundled rules" : "the previously downloaded rules"
         }.`
       );
     }

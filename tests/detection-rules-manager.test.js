@@ -151,3 +151,47 @@ test('forceUpdate reports a failed download and keeps the previous rules', async
   remoteHandler = async () => jsonResponse(NEW_RULES);
   assert.strictEqual((await manager.forceUpdate()).version, '1.3.0');
 });
+
+test('keeps the retry delay across service worker restarts', async () => {
+  remoteHandler = async () => jsonResponse({}, 429);
+  await seedCache(48 * HOUR);
+  await startManager();
+  assert.strictEqual(remoteCalls, 1);
+
+  // A restarted worker within the retry delay doesn't refetch.
+  const restarted = await startManager();
+  assert.strictEqual(remoteCalls, 1);
+  assert.strictEqual((await restarted.getDetectionRules()).version, '1.2.5');
+  await restarted._refreshInFlight;
+  assert.strictEqual(remoteCalls, 1);
+
+  // Once the delay has passed, a restarted worker retries.
+  await chromeMock.storage.local.set({
+    detection_rules_last_failed_fetch: Date.now() - 10 * 60 * 1000
+  });
+  remoteHandler = async () => jsonResponse(NEW_RULES);
+  const later = await startManager();
+  assert.strictEqual(remoteCalls, 2);
+  assert.strictEqual(later.cachedRules.version, '1.3.0');
+});
+
+test('forceUpdate reports its own result when another fetch overlaps', async () => {
+  await seedCache(HOUR);
+  const manager = await startManager();
+
+  const pending = [];
+  remoteHandler = () => new Promise((resolve) => pending.push(resolve));
+  const tick = () => new Promise((resolve) => setImmediate(resolve));
+
+  const forced = manager.forceUpdate();
+  while (pending.length < 1) await tick();
+  const background = manager.updateDetectionRules();
+  while (pending.length < 2) await tick();
+
+  // The overlapping fetch fails first, then the forced one succeeds.
+  pending[1](jsonResponse({}, 503));
+  await background;
+  pending[0](jsonResponse(NEW_RULES));
+
+  assert.strictEqual((await forced).version, '1.3.0');
+});
