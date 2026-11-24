@@ -35,14 +35,14 @@ test("protectedDomains replaces the allowlist as the squatting target list", asy
   assert.equal(d.checkDomain("contosso.com")?.detected, true);
 });
 
-test("allowlisted hosts and their subdomains are never flagged", async () => {
+test("the allowlist does not exempt whole hosts from squatting checks", async () => {
+  // The content script skips allowlisted URLs itself; a path-scoped entry must not cover the host
   const d = await detector({
-    domainSquatting: { protectedDomains: ["salesforce.com"] },
-    urlAllowlist: ["https://client.my.salesforce-setup.com/"],
+    domainSquatting: { protectedDomains: ["contoso.com"] },
+    urlAllowlist: ["https://contosso.com/safe"],
   });
-  assert.equal(d.checkDomain("client.my.salesforce-setup.com"), null);
-  assert.equal(d.checkDomain("eu.client.my.salesforce-setup.com"), null);
-  assert.equal(d.checkDomain("other.salesforce-setup.com")?.detected, true);
+  assert.equal(d.checkDomain("contosso.com")?.detected, true);
+  assert.equal(d.checkDomain("eu.contosso.com")?.detected, true);
 });
 
 test("wildcard allowlist patterns are read as domains", async () => {

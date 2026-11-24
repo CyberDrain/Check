@@ -55,7 +55,7 @@ Common suspicious words attackers use: `login`, `secure`, `verify`, `official`, 
 
 The default rules file doesn't protect any domains, so you choose what Check protects:
 
-- **Protected domains** (`domainSquatting.protectedDomains` in policy): the domains you want protected, such as your own and your clients' domains. When this list is set, only these domains are protected.
+- **Protected domains** (`domainSquatting.protectedDomains` in policy): the domains you want protected, such as your own and your clients' domains. When this list is set, it replaces the URL Allowlist domains below; domains listed in a custom rules file are still protected as well.
 - **Your URL Allowlist**: if no protected domains are set, Check protects the domains in your [URL Allowlist](../settings/detection-rules.md#url-allowlist-regex-or-url-with-wildcards) instead.
 
 {% hint style="warning" %}
@@ -190,7 +190,7 @@ See [General Settings](../settings/general.md) for configuring reporting and web
 
 If Check blocks a site you trust:
 
-1. **Add it to your URL Allowlist** in Detection Rules settings
+1. **Add it to your URL Allowlist** in Detection Rules settings. Add the host (`https://example.com/*`) rather than a single page, so every page on the site is skipped
 2. If you haven't set protected domains, set them now. Otherwise the allowlisted site becomes protected too, and sites that look like it start getting flagged
 3. Report the false positive to help improve Check
 

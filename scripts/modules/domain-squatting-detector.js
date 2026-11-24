@@ -264,11 +264,6 @@ export class DomainSquattingDetector {
       return null;
     }
 
-    const host = testDomain.toLowerCase();
-    if (this.allowlistHosts.some(h => host === h || host.endsWith('.' + h))) {
-      return null;
-    }
-
     const testBase = this.extractBaseDomain(testDomain);
 
     for (const protectedDomain of this.protectedDomains) {
