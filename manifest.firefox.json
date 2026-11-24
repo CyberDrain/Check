@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Check by CyberDrain",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Protect against phishing attacks targeting Microsoft 365 login pages with enterprise-grade detection",
   "permissions": [
     "storage",
