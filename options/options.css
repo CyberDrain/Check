@@ -2836,6 +2836,11 @@ body {
   font-size: 14px;
 }
 
+.enterprise-notice .notice-action {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 /* Policy-managed elements */
 .policy-managed {
   opacity: 0.6;
