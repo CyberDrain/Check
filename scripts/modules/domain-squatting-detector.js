@@ -5,6 +5,15 @@
 
 import logger from '../utils/logger.js';
 
+// Shorter names turn up inside ordinary words and sit one typo away from other real sites
+const MIN_FUZZY_LENGTH = 5;
+
+const COMMON_COMBOS = [
+  'secure', 'login', 'account', 'verify', 'support', 'help', 'my',
+  'auth', 'sso', 'signin', 'app', 'portal', 'online', 'web',
+  'mobile', 'service', 'official', 'verified', 'safe'
+];
+
 export class DomainSquattingDetector {
   constructor() {
     this.protectedDomains = [];
@@ -167,17 +176,13 @@ export class DomainSquattingDetector {
         ...(runtimeDomainSquatting.algorithms || {}),
       };
 
-      // Extract domains from URL allowlist patterns from runtime config
-      const urlAllowlist = runtimeConfig?.urlAllowlist || [];
-      
-      // Extract domains from URL allowlist patterns
-      const allowlistDomains = this.extractDomainsFromAllowlist(urlAllowlist);
-      if (allowlistDomains.length > 0) {
-        // Merge with protected domains from rules (avoid duplicates)
-        const allDomains = [...new Set([...this.protectedDomains, ...allowlistDomains])];
-        this.protectedDomains = allDomains;
-        logger.log(`Added ${allowlistDomains.length} domains from URL allowlist`);
-      }
+      // An explicit protected list replaces the domains taken from the URL allowlist,
+      // so allowlisting a third-party site doesn't make its lookalikes block-worthy
+      const policyDomains = this.extractDomainsFromAllowlist(runtimeDomainSquatting.protectedDomains);
+      const allowlistDomains = policyDomains.length > 0
+        ? []
+        : this.extractDomainsFromAllowlist(runtimeConfig?.urlAllowlist);
+      this.protectedDomains = [...new Set([...this.protectedDomains, ...policyDomains, ...allowlistDomains])];
       
       logger.log('DomainSquattingDetector initialized:', {
         enabled: this.enabled,
@@ -186,6 +191,7 @@ export class DomainSquattingDetector {
         logDetections: this.logDetections,
         protectedDomains: this.protectedDomains.length,
         fromRules: rulesDomainSquatting?.protected_domains?.length || 0,
+        fromPolicy: policyDomains.length,
         fromAllowlist: allowlistDomains.length,
         deviationThreshold: this.deviationThreshold
       });
@@ -267,9 +273,12 @@ export class DomainSquattingDetector {
       }
 
       const detections = [];
+      const fuzzy = protectedBase.length >= MIN_FUZZY_LENGTH;
+      // 1 edit for 5-8 letter names, 2 for longer ones, capped by the configured threshold
+      const maxDistance = Math.min(this.deviationThreshold, Math.floor((protectedBase.length - 1) / 4));
 
-      if (this.algorithms.levenshtein) {
-        const levenshteinResult = this.detectLevenshtein(testBase, protectedBase);
+      if (this.algorithms.levenshtein && fuzzy) {
+        const levenshteinResult = this.detectLevenshtein(testBase, protectedBase, maxDistance);
         if (levenshteinResult) {
           detections.push(levenshteinResult);
         }
@@ -282,7 +291,7 @@ export class DomainSquattingDetector {
         }
       }
 
-      if (this.algorithms.typosquat) {
+      if (this.algorithms.typosquat && fuzzy) {
         const typosquatResult = this.detectTyposquat(testBase, protectedBase);
         if (typosquatResult) {
           detections.push(typosquatResult);
@@ -377,10 +386,10 @@ export class DomainSquattingDetector {
   /**
    * Detect domain squatting using Levenshtein distance
    */
-  detectLevenshtein(testDomain, protectedDomain) {
+  detectLevenshtein(testDomain, protectedDomain, maxDistance) {
     const distance = this.levenshteinDistance(testDomain, protectedDomain);
     
-    if (distance > 0 && distance <= this.deviationThreshold) {
+    if (distance > 0 && distance <= maxDistance) {
       return {
         technique: 'levenshtein',
         description: `Domain differs by ${distance} character(s) from protected domain`,
@@ -549,61 +558,26 @@ export class DomainSquattingDetector {
    * Detect combosquatting (adding prefixes/suffixes)
    */
   detectCombosquat(testDomain, protectedDomain) {
-    // Check if protected domain is contained in test domain
-    if (testDomain.includes(protectedDomain) && testDomain !== protectedDomain) {
-      const prefix = testDomain.substring(0, testDomain.indexOf(protectedDomain));
-      const suffix = testDomain.substring(testDomain.indexOf(protectedDomain) + protectedDomain.length);
-      
-      // Common combosquatting prefixes and suffixes
-      const commonCombos = [
-        'secure', 'login', 'account', 'verify', 'support', 'help', 'my',
-        'auth', 'sso', 'signin', 'app', 'portal', 'online', 'web',
-        'mobile', 'service', 'official', 'verified', 'safe'
-      ];
-      
-      const hasCommonCombo = commonCombos.some(combo => 
-        prefix.includes(combo) || suffix.includes(combo)
-      );
-      
-      if (hasCommonCombo) {
-        return {
-          technique: 'combosquat',
-          description: 'Domain adds suspicious prefix/suffix to protected domain',
-          pattern: 'common_combo',
-          prefix: prefix,
-          suffix: suffix,
-          confidence: 0.9
-        };
-      }
-      
-      // Any prefix/suffix is suspicious but lower confidence
-      if (prefix || suffix) {
-        return {
-          technique: 'combosquat',
-          description: 'Domain adds prefix/suffix to protected domain',
-          pattern: 'generic_combo',
-          prefix: prefix,
-          suffix: suffix,
-          confidence: 0.7
-        };
-      }
+    const tokens = testDomain.split(/[-_]/);
+    let extra;
+    if (tokens.length > 1 && tokens.includes(protectedDomain)) {
+      extra = tokens.filter(t => t && t !== protectedDomain);
+    } else if (protectedDomain.length >= MIN_FUZZY_LENGTH && testDomain.includes(protectedDomain)) {
+      extra = testDomain.split(protectedDomain).join('-').split(/[-_]/).filter(Boolean);
+    } else {
+      return null;
     }
-    
-    // Check if test domain contains protected domain with separator
-    const separators = ['-', '_', ''];
-    for (const sep of separators) {
-      if (testDomain.startsWith(protectedDomain + sep) || testDomain.endsWith(sep + protectedDomain)) {
-        return {
-          technique: 'combosquat',
-          description: `Domain adds text with separator '${sep || '(none)'}' to protected domain`,
-          pattern: 'separator_combo',
-          separator: sep,
-          confidence: 0.75
-        };
-      }
-    }
-    
-    return null;
+
+    const common = extra.some(t => COMMON_COMBOS.includes(t));
+    return {
+      technique: 'combosquat',
+      description: common
+        ? 'Domain adds suspicious prefix/suffix to protected domain'
+        : 'Domain adds prefix/suffix to protected domain',
+      pattern: common ? 'common_combo' : 'generic_combo',
+      added: extra,
+      confidence: common ? 0.9 : 0.7
+    };
   }
   
   /**

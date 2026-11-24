@@ -178,7 +178,7 @@
     },
     "domainSquatting": {
       "title": "Domain Squatting Detection",
-      "description": "Configuration for domain squatting detection to protect against typosquatting, homoglyphs, and combosquatting attacks. Enable/disable is controlled here (config/policy), and domains are automatically extracted from the URL allowlist.",
+      "description": "Configuration for domain squatting detection to protect against typosquatting, homoglyphs, and combosquatting attacks. Enable/disable is controlled here (config/policy). Protects the domains in protectedDomains, or the URL allowlist domains when protectedDomains is empty.",
       "type": "object",
       "properties": {
         "enabled": {
@@ -227,8 +227,8 @@
           }
         },
         "protectedDomains": {
-          "title": "Additional Protected Domains",
-          "description": "OPTIONAL: Additional domains to protect beyond those automatically extracted from the URL allowlist. Normally you should just add domains to the URL allowlist instead.",
+          "title": "Protected Domains",
+          "description": "Domains to protect from lookalikes. When set, replaces the domains taken from the URL allowlist, so allowlisted third-party sites are not protected.",
           "type": "array",
           "items": {
             "type": "string",
