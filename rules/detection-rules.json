@@ -1512,7 +1512,7 @@
     },
     {
       "id": "phi_021_suspicious_url_structure",
-      "pattern": "(?<=://[^/]+)(?:/[a-zA-Z0-9]{20,}(?:/[a-zA-Z0-9]{8,})*(?=/|\\?|#|$)|/[a-zA-Z0-9_-]{40,}(?=/|\\?|#|$))",
+      "pattern": "^https?://[^/?#]+(?:/[a-zA-Z0-9]{20,}(?:/[a-zA-Z0-9]{8,})*(?=/|\\?|#|$)|/[a-zA-Z0-9_-]{40,}(?=/|\\?|#|$))",
       "flags": "i",
       "severity": "medium",
       "description": "Suspicious URL structure with long random strings in path segments (before query parameters)",
