@@ -34,3 +34,13 @@ test("protectedDomains replaces the allowlist as the squatting target list", asy
   assert.equal(d.checkDomain("secure-box.com"), null);
   assert.equal(d.checkDomain("contosso.com")?.detected, true);
 });
+
+test("allowlisted hosts and their subdomains are never flagged", async () => {
+  const d = await detector({
+    domainSquatting: { protectedDomains: ["salesforce.com"] },
+    urlAllowlist: ["https://client.my.salesforce-setup.com/"],
+  });
+  assert.equal(d.checkDomain("client.my.salesforce-setup.com"), null);
+  assert.equal(d.checkDomain("eu.client.my.salesforce-setup.com"), null);
+  assert.equal(d.checkDomain("other.salesforce-setup.com")?.detected, true);
+});

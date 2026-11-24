@@ -275,6 +275,15 @@
       </disabledValue>
     </policy>
 
+    <!-- Domain Squatting Protected Domains -->
+    <policy name="CheckDomainSquattingProtectedDomains" class="Machine" displayName="$(string.CheckDomainSquattingProtectedDomains)" explainText="$(string.CheckDomainSquattingProtectedDomains_Explain)" key="SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\knepjpocdagponkonnbggpcnhnaikajg\policy\domainSquatting\protectedDomains" presentation="$(presentation.CheckDomainSquattingProtectedDomains)">
+      <parentCategory ref="CheckExtensionEdge" />
+      <supportedOn ref="SUPPORTED_WIN7" />
+      <elements>
+        <list id="ProtectedDomainsList" valuePrefix="" />
+      </elements>
+    </policy>
+
     <!-- CHROME EXTENSION POLICIES -->
 
     <!-- Extension Settings - Chrome -->
@@ -526,6 +535,15 @@
       <disabledValue>
         <decimal value="0" />
       </disabledValue>
+    </policy>
+
+    <!-- Domain Squatting Protected Domains - Chrome -->
+    <policy name="CheckDomainSquattingProtectedDomainsChrome" class="Machine" displayName="$(string.CheckDomainSquattingProtectedDomainsChrome)" explainText="$(string.CheckDomainSquattingProtectedDomainsChrome_Explain)" key="SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\benimdeioplgkhanklclahllklceahbe\policy\domainSquatting\protectedDomains" presentation="$(presentation.CheckDomainSquattingProtectedDomainsChrome)">
+      <parentCategory ref="CheckExtensionChrome" />
+      <supportedOn ref="SUPPORTED_WIN7" />
+      <elements>
+        <list id="ProtectedDomainsListChrome" valuePrefix="" />
+      </elements>
     </policy>
   </policies>
 </policyDefinitions>

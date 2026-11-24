@@ -108,7 +108,8 @@
               "page_blocked",
               "rogue_app_detected",
               "threat_detected",
-              "validation_event"
+              "validation_event",
+              "domain_squatting_detected"
             ]
           },
           "default": []

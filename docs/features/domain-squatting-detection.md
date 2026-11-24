@@ -167,7 +167,7 @@ Domain squatting detection can be managed through Group Policy (GPO) or Microsof
 
 ### Adding Organization-Specific Domains
 
-Add your organization's domains to **protected domains** in policy (or the CIPP standard).
+Add your organization's domains to **protected domains**: the CIPP standard, the *Domain squatting protected domains* ADMX policy, `$protectedDomains` in the Windows deployment script, or `domainSquatting.protectedDomains` in the macOS/Linux and Firefox policy files.
 
 **Example:** Protecting `contoso.com` catches fake domains like:
 - `cont0so.com` (zero instead of the letter "o")

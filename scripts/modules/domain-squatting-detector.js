@@ -17,6 +17,7 @@ const COMMON_COMBOS = [
 export class DomainSquattingDetector {
   constructor() {
     this.protectedDomains = [];
+    this.allowlistHosts = [];
     this.enabled = false;
     this.action = 'block';
     this.minimumSeverity = 'high';
@@ -179,9 +180,8 @@ export class DomainSquattingDetector {
       // An explicit protected list replaces the domains taken from the URL allowlist,
       // so allowlisting a third-party site doesn't make its lookalikes block-worthy
       const policyDomains = this.extractDomainsFromAllowlist(runtimeDomainSquatting.protectedDomains);
-      const allowlistDomains = policyDomains.length > 0
-        ? []
-        : this.extractDomainsFromAllowlist(runtimeConfig?.urlAllowlist);
+      this.allowlistHosts = this.extractDomainsFromAllowlist(runtimeConfig?.urlAllowlist);
+      const allowlistDomains = policyDomains.length > 0 ? [] : this.allowlistHosts;
       this.protectedDomains = [...new Set([...this.protectedDomains, ...policyDomains, ...allowlistDomains])];
       
       logger.log('DomainSquattingDetector initialized:', {
@@ -260,6 +260,11 @@ export class DomainSquattingDetector {
 
   checkDomain(testDomain) {
     if (!this.enabled || !testDomain) {
+      return null;
+    }
+
+    const host = testDomain.toLowerCase();
+    if (this.allowlistHosts.some(h => host === h || host.endsWith('.' + h))) {
       return null;
     }
 
