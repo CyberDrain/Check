@@ -1758,6 +1758,8 @@ class CheckBackground {
       await this.refreshPolicy();
       // Reload DetectionRulesManager configuration to pick up policy changes
       await safe(this.detectionRulesManager.reloadConfiguration());
+      // Pick up allowlist/protected-domain changes without a service worker restart
+      await this._handleDetectionRulesUpdated(this.detectionRulesManager.cachedRules);
     }
   }
 

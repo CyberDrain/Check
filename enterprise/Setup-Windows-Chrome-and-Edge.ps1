@@ -114,6 +114,12 @@ Write-Host ""
 
 $cfg_showNotifications = Read-Setting -Name "showNotifications" -Description "Show notifications (0 = Disabled, 1 = Enabled)" -Default "1" -Type "bool"
 $cfg_enableValidPageBadge = Read-Setting -Name "enableValidPageBadge" -Description "Show valid page badge (0 = Disabled, 1 = Enabled)" -Default "0" -Type "bool"
+do {
+    $cfg_validPageBadgeTimeout = Read-Setting -Name "validPageBadgeTimeout" -Description "Seconds before the valid page badge hides (0-300, 0 = until dismissed)" -Default "5" -Type "int"
+    if ($cfg_validPageBadgeTimeout -notmatch '^0*(?:[0-9]{1,2}|[12][0-9]{2}|300)$') {
+        Write-Host "  Valid page badge timeout must be between 0 and 300 seconds." -ForegroundColor Yellow
+    }
+} while ($cfg_validPageBadgeTimeout -notmatch '^0*(?:[0-9]{1,2}|[12][0-9]{2}|300)$')
 $cfg_enablePageBlocking = Read-Setting -Name "enablePageBlocking" -Description "Enable page blocking (0 = Disabled, 1 = Enabled)" -Default "1" -Type "bool"
 $cfg_forceToolbarPin = Read-Setting -Name "forceToolbarPin" -Description "Force pin extension to toolbar (0 = Not pinned, 1 = Force pinned)" -Default "1" -Type "bool"
 $cfg_updateInterval = Read-Setting -Name "updateInterval" -Description "Update interval in hours (1-168)" -Default "24" -Type "int"
@@ -147,7 +153,7 @@ Write-Host ""
 $cfg_enableGenericWebhook = Read-Setting -Name "enableGenericWebhook" -Description "Enable generic webhook (0 = Disabled, 1 = Enabled)" -Default "0" -Type "bool"
 if ($cfg_enableGenericWebhook -eq "1") {
     $cfg_webhookUrl = Read-Setting -Name "webhookUrl" -Description "Webhook URL (e.g., https://webhook.example.com/endpoint)" -Default ""
-    $cfg_webhookEvents = Read-ArraySetting -Name "webhookEvents" -Description "Event types to send. Available: detection_alert, false_positive_report, page_blocked, rogue_app_detected, threat_detected, validation_event"
+    $cfg_webhookEvents = Read-ArraySetting -Name "webhookEvents" -Description "Event types to send. Available: detection_alert, false_positive_report, page_blocked, rogue_app_detected, threat_detected, validation_event, domain_squatting_detected"
 } else {
     $cfg_webhookUrl = ""
     $cfg_webhookEvents = @()
@@ -161,6 +167,7 @@ Write-Host "--- URL Allowlist ---" -ForegroundColor Cyan
 Write-Host ""
 
 $cfg_urlAllowlist = Read-ArraySetting -Name "urlAllowlist" -Description "URLs to allowlist. Supports wildcards (e.g., https://*.example.com) and regex patterns"
+$cfg_protectedDomains = Read-ArraySetting -Name "protectedDomains" -Description "Domains to protect from lookalike sites (e.g., contoso.com). Leave blank to protect the allowlist domains instead"
 Write-Host ""
 
 #######################################################################
@@ -220,6 +227,7 @@ function Format-SingleQuoted {
 $replacements = @(
     @{ Pattern = '$showNotifications = 1 #';         Value = "`$showNotifications = $cfg_showNotifications #" }
     @{ Pattern = '$enableValidPageBadge = 0 #';      Value = "`$enableValidPageBadge = $cfg_enableValidPageBadge #" }
+    @{ Pattern = '$validPageBadgeTimeout = 5 #';     Value = "`$validPageBadgeTimeout = $cfg_validPageBadgeTimeout #" }
     @{ Pattern = '$enablePageBlocking = 1 #';        Value = "`$enablePageBlocking = $cfg_enablePageBlocking #" }
     @{ Pattern = '$forceToolbarPin = 1 #';           Value = "`$forceToolbarPin = $cfg_forceToolbarPin #" }
     @{ Pattern = '$enableCippReporting = 0 #';       Value = "`$enableCippReporting = $cfg_enableCippReporting #" }
@@ -244,6 +252,7 @@ $replacements = @(
 # Array replacements — replace the full assignment line including inline comment
 $arrayReplacements = @(
     @{ Pattern = '$urlAllowlist = @() #';     Value = "`$urlAllowlist = $(Format-ArrayLiteral $cfg_urlAllowlist) #" }
+    @{ Pattern = '$protectedDomains = @() #'; Value = "`$protectedDomains = $(Format-ArrayLiteral $cfg_protectedDomains) #" }
     @{ Pattern = '$webhookEvents = @() #';    Value = "`$webhookEvents = $(Format-ArrayLiteral $cfg_webhookEvents) #" }
 )
 

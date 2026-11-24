@@ -22,14 +22,20 @@ Rules are managed by the [`DetectionRulesManager`](https://github.com/CyberDrain
 * Load rules at extension startup
 * Check for updates based on the configured interval (default: 24 hours)
 * Cache rules locally in browser storage for offline use
-* Fall back to local rules ([`rules/detection-rules.json`](https://github.com/CyberDrain/Check/blob/main/rules/detection-rules.json)) if remote fetch fails
+* Keep using the last successfully downloaded rules if an update fails
+* Fall back to local rules ([`rules/detection-rules.json`](https://github.com/CyberDrain/Check/blob/main/rules/detection-rules.json)) only if rules have never been downloaded
 
 **Update Process:**
 
-1. Rules are fetched from the configured remote URL, with a fallback to the local file
-2. New rules are cached locally and immediately applied
-3. A message is sent to notify other extension components of the update
-4. Open tabs require a reload to apply the new rules
+1. Rules are fetched from the configured remote URL
+2. A response is accepted only if it is a valid rules file (JSON object containing at least one known rules section). Error pages and other unexpected responses are rejected
+3. New rules are cached locally and immediately applied
+4. A message is sent to notify other extension components of the update
+5. Open tabs require a reload to apply the new rules
+
+**When an update fails:**
+
+If the remote URL can't be reached or returns an invalid response (for example during a GitHub outage, rate limiting, or a network problem), Check keeps using the last rules it downloaded successfully, even if they are older than the update interval. It retries on the next refresh, waiting at least 5 minutes between attempts. The bundled rules are used only when no rules have been downloaded yet.
 
 ## Exclusions
 

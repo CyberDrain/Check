@@ -14,6 +14,7 @@ $edgeExtensionSettingsKey = "HKLM:\SOFTWARE\Policies\Microsoft\Edge\ExtensionSet
 # Extension Configuration Settings
 $showNotifications = 1 # 0 = Unchecked, 1 = Checked (Enabled); default is 1; This will set the "Show Notifications" option in the extension settings.
 $enableValidPageBadge = 0 # 0 = Unchecked, 1 = Checked (Enabled); default is 0; This will set the "Show Valid Page Badge" option in the extension settings.
+$validPageBadgeTimeout = 5 # Seconds before the valid page badge hides; default is 5; 0 keeps it visible until dismissed. Range: 0-300.
 $enablePageBlocking = 1 # 0 = Unchecked, 1 = Checked (Enabled); default is 1; This will set the "Enable Page Blocking" option in the extension settings.
 $forceToolbarPin = 1 # 0 = Not pinned, 1 = Force pinned to toolbar; default is 1
 $enableCippReporting = 0 # 0 = Unchecked, 1 = Checked (Enabled); default is 1; This will set the "Enable CIPP Reporting" option in the extension settings.
@@ -23,12 +24,13 @@ $customRulesUrl = "" # This will set the "Config URL" option in the Detection Co
 $updateInterval = 24 # This will set the "Update Interval" option in the Detection Configuration settings; default is 24 (hours). Range: 1-168 hours (1 hour to 1 week).
 $urlAllowlist = @() # This will set the "URL Allowlist" option in the Detection Configuration settings; default is blank; if you want to add multiple URLs, add them as a comma-separated list within the brackets (e.g., @("https://example1.com", "https://example2.com")). Supports simple URLs with * wildcard (e.g., https://*.example.com) or advanced regex patterns (e.g., ^https:\/\/(www\.)?example\.com\/.*$).
 $domainSquattingEnabled = 0 # 0 = Disabled, 1 = Enabled; default is 0; controls domain squatting detection from managed policy/config.
+$protectedDomains = @() # Domains to protect from lookalike sites when domain squatting detection is enabled; default is blank; e.g. @("contoso.com", "fabrikam.com"). When blank, the domains in $urlAllowlist are protected instead.
 $enableDebugLogging = 0 # 0 = Unchecked, 1 = Checked (Enabled); default is 0; This will set the "Enable Debug Logging" option in the Activity Log settings.
 
 # Generic Webhook Settings
 $enableGenericWebhook = 0 # 0 = Disabled, 1 = Enabled; default is 0; This will enable the generic webhook for sending detection events to a custom endpoint.
 $webhookUrl = "" # This will set the "Webhook URL" option; default is blank; if you set $enableGenericWebhook to 1, you must set this to a valid URL including the protocol (e.g., https://webhook.example.com/endpoint).
-$webhookEvents = @() # This will set the "Event Types" to send to the webhook; default is blank; if you set $enableGenericWebhook to 1, you can specify which events to send. Available events: "detection_alert", "false_positive_report", "page_blocked", "rogue_app_detected", "threat_detected", "validation_event". Example: @("detection_alert", "page_blocked", "threat_detected").
+$webhookEvents = @() # This will set the "Event Types" to send to the webhook; default is blank; if you set $enableGenericWebhook to 1, you can specify which events to send. Available events: "detection_alert", "false_positive_report", "page_blocked", "rogue_app_detected", "threat_detected", "validation_event", "domain_squatting_detected". Example: @("detection_alert", "page_blocked", "threat_detected").
 
 # Custom Branding Settings
 $companyName = "CyberDrain" # This will set the "Company Name" option in the Custom Branding settings; default is "CyberDrain".
@@ -61,6 +63,7 @@ function Configure-ExtensionSettings {
     # Set extension configuration settings
     New-ItemProperty -Path $ManagedStorageKey -Name "showNotifications" -PropertyType DWord -Value $showNotifications -Force | Out-Null
     New-ItemProperty -Path $ManagedStorageKey -Name "enableValidPageBadge" -PropertyType DWord -Value $enableValidPageBadge -Force | Out-Null
+    New-ItemProperty -Path $ManagedStorageKey -Name "validPageBadgeTimeout" -PropertyType DWord -Value $validPageBadgeTimeout -Force | Out-Null
     New-ItemProperty -Path $ManagedStorageKey -Name "enablePageBlocking" -PropertyType DWord -Value $enablePageBlocking -Force | Out-Null
     New-ItemProperty -Path $ManagedStorageKey -Name "enableCippReporting" -PropertyType DWord -Value $enableCippReporting -Force | Out-Null
     New-ItemProperty -Path $ManagedStorageKey -Name "cippServerUrl" -PropertyType String -Value $cippServerUrl -Force | Out-Null
@@ -75,6 +78,16 @@ function Configure-ExtensionSettings {
         New-Item -Path $domainSquattingKey -Force | Out-Null
     }
     New-ItemProperty -Path $domainSquattingKey -Name "enabled" -PropertyType DWord -Value $domainSquattingEnabled -Force | Out-Null
+
+    # Protected domains list, recreated so removed entries don't linger
+    $protectedDomainsKey = "$domainSquattingKey\protectedDomains"
+    if (Test-Path $protectedDomainsKey) {
+        Remove-Item -Path $protectedDomainsKey -Recurse -Force | Out-Null
+    }
+    New-Item -Path $protectedDomainsKey -Force | Out-Null
+    for ($i = 0; $i -lt $protectedDomains.Count; $i++) {
+        New-ItemProperty -Path $protectedDomainsKey -Name ($i + 1).ToString() -PropertyType String -Value $protectedDomains[$i] -Force | Out-Null
+    }
 
     # Create and configure URL allow list
     $urlAllowlistKey = "$ManagedStorageKey\urlAllowlist"

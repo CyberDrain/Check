@@ -152,16 +152,14 @@ async function reportFalsePositive() {
     reportBtn.style.background = "#6b7280";
     reportBtn.style.color = "white";
     
-    const payload = {
-      version: "1.0",
-      type: "false_positive_report",
-      timestamp: new Date().toISOString(),
-      source: "Check Extension",
-      extensionVersion: chrome.runtime.getManifest().version,
+    // Sent through the background so the payload carries the user like every other webhook
+    const response = await chrome.runtime.sendMessage({
+      type: "send_webhook",
+      webhookType: "false_positive_report",
       data: {
-        reportedUrl: document.getElementById("blockedUrl").textContent,
-        reportedReason: document.getElementById("blockReason").textContent,
-        reportTimestamp: new Date().toISOString(),
+        url: document.getElementById("blockedUrl").textContent,
+        reason: document.getElementById("blockReason").textContent,
+        timestamp: new Date().toISOString(),
         userAgent: navigator.userAgent,
         browserInfo: {
           platform: navigator.platform,
@@ -177,32 +175,17 @@ async function reportFalsePositive() {
           availHeight: window.screen.availHeight,
           colorDepth: window.screen.colorDepth
         },
-        detectionDetails: globalDetectionDetails || {},
-        userComments: null
+        detectionDetails: globalDetectionDetails || {}
       }
-    };
-    
-    console.log("Sending false positive report to:", webhookConfig.url);
-    console.log("Report payload:", payload);
-    
-    const response = await fetch(webhookConfig.url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Webhook-Type": "false_positive_report",
-        "X-Webhook-Version": "1.0"
-      },
-      body: JSON.stringify(payload)
     });
-    
-    if (response.ok) {
+
+    if (response?.success) {
       console.log("False positive report sent successfully");
       reportBtn.textContent = "Report Sent Successfully";
       reportBtn.style.background = "#16a34a";
       reportBtn.style.color = "white";
     } else {
-      console.warn("False positive report failed with HTTP status:", response.status, response.statusText);
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(response?.error || "Report could not be sent");
     }
   } catch (error) {
     console.error("Failed to send false positive report:", error);

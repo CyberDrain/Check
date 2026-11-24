@@ -23,6 +23,7 @@ $edgeExtensionSettingsKey = "HKLM:\SOFTWARE\Policies\Microsoft\Edge\ExtensionSet
 # Extension Configuration Settings
 $showNotifications = 1 # 0 = Unchecked, 1 = Checked (Enabled); default is 1; This will set the "Show Notifications" option in the extension settings.
 $enableValidPageBadge = 0 # 0 = Unchecked, 1 = Checked (Enabled); default is 0; This will set the "Show Valid Page Badge" option in the extension settings.
+$validPageBadgeTimeout = 5 # Seconds before the valid page badge hides; default is 5; 0 keeps it visible until dismissed. Range: 0-300.
 $enablePageBlocking = 1 # 0 = Unchecked, 1 = Checked (Enabled); default is 1; This will set the "Enable Page Blocking" option in the extension settings.
 $forceToolbarPin = 1 # 0 = Not pinned, 1 = Force pinned to toolbar; default is 1
 $enableCippReporting = 0 # 0 = Unchecked, 1 = Checked (Enabled); default is 0; This will set the "Enable CIPP Reporting" option in the extension settings.
@@ -32,12 +33,13 @@ $customRulesUrl = "" # This will set the "Config URL" option in the Detection Co
 $updateInterval = 24 # This will set the "Update Interval" option in the Detection Configuration settings; default is 24 (hours). Range: 1-168 hours (1 hour to 1 week).
 $urlAllowlist = @() # This will set the "URL Allowlist" option in the Detection Configuration settings; default is blank; if you want to add multiple URLs, add them as a comma-separated list within the brackets (e.g., @("https://example1.com", "https://example2.com")). Supports simple URLs with * wildcard (e.g., https://*.example.com) or advanced regex patterns (e.g., ^https:\/\/(www\.)?example\.com\/.*$).
 $domainSquattingEnabled = 0 # 0 = Disabled, 1 = Enabled; default is 0; controls domain squatting detection from managed policy/config.
+$protectedDomains = @() # Domains to protect from lookalike sites when domain squatting detection is enabled; default is blank; e.g. @("contoso.com", "fabrikam.com"). When blank, the domains in $urlAllowlist are protected instead.
 $enableDebugLogging = 0 # 0 = Unchecked, 1 = Checked (Enabled); default is 0; This will set the "Enable Debug Logging" option in the Activity Log settings.
 
 # Generic Webhook Settings
 $enableGenericWebhook = 0 # 0 = Disabled, 1 = Enabled; default is 0; This will enable the generic webhook for sending detection events to a custom endpoint.
 $webhookUrl = "" # This will set the "Webhook URL" option; default is blank; if you set $enableGenericWebhook to 1, you must set this to a valid URL including the protocol (e.g., https://webhook.example.com/endpoint).
-$webhookEvents = @() # This will set the "Event Types" to send to the webhook; default is blank; if you set $enableGenericWebhook to 1, you can specify which events to send. Available events: "detection_alert", "false_positive_report", "page_blocked", "rogue_app_detected", "threat_detected", "validation_event". Example: @("detection_alert", "page_blocked", "threat_detected").
+$webhookEvents = @() # This will set the "Event Types" to send to the webhook; default is blank; if you set $enableGenericWebhook to 1, you can specify which events to send. Available events: "detection_alert", "false_positive_report", "page_blocked", "rogue_app_detected", "threat_detected", "validation_event", "domain_squatting_detected". Example: @("detection_alert", "page_blocked", "threat_detected").
 
 # Custom Branding Settings
 $companyName = "CyberDrain" # This will set the "Company Name" option in the Custom Branding settings; default is "CyberDrain".
@@ -144,6 +146,7 @@ foreach ($browser in $browsers) {
     # Core DWord settings
     if (!(Test-RegValueWithDetails $browser.Name $policyKey 'showNotifications' $showNotifications)) { exit 1 }
     if (!(Test-RegValueWithDetails $browser.Name $policyKey 'enableValidPageBadge' $enableValidPageBadge)) { exit 1 }
+    if (!(Test-RegValueWithDetails $browser.Name $policyKey 'validPageBadgeTimeout' $validPageBadgeTimeout)) { exit 1 }
     if (!(Test-RegValueWithDetails $browser.Name $policyKey 'enablePageBlocking' $enablePageBlocking)) { exit 1 }
     if (!(Test-RegValueWithDetails $browser.Name $policyKey 'enableCippReporting' $enableCippReporting)) { exit 1 }
     if (!(Test-RegValueWithDetails $browser.Name $policyKey 'updateInterval' $updateInterval)) { exit 1 }
@@ -161,6 +164,21 @@ foreach ($browser in $browsers) {
         exit 1
     }
     if (!(Test-RegValueWithDetails $browser.Name $domainSquattingKey 'enabled' $domainSquattingEnabled)) { exit 1 }
+
+    # domainSquatting\protectedDomains subkey — verify exact count and values
+    $protectedDomainsKey = "$domainSquattingKey\protectedDomains"
+    if (!(Test-Path $protectedDomainsKey)) {
+        Write-DetectionFailure -BrowserName $browser.Name -KeyPath $protectedDomainsKey -ValueName $null -ExpectedValue $null -ActualValue $null
+        exit 1
+    }
+    $protectedDomainsCount = @((Get-Item $protectedDomainsKey).Property).Count
+    if ($protectedDomainsCount -ne $protectedDomains.Count) {
+        Write-Output "$($browser.Name): Registry key '$protectedDomainsKey' has $protectedDomainsCount protected domain value(s); expected $($protectedDomains.Count)."
+        exit 1
+    }
+    for ($i = 0; $i -lt $protectedDomains.Count; $i++) {
+        if (!(Test-RegValueWithDetails $browser.Name $protectedDomainsKey ($i + 1).ToString() $protectedDomains[$i])) { exit 1 }
+    }
 
     # customBranding subkey
     $brandingKey = "$policyKey\customBranding"

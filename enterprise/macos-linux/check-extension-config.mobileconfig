@@ -74,6 +74,8 @@
                     <dict>
                         <key>enabled</key>
                         <false />
+                        <key>protectedDomains</key>
+                        <array />
                     </dict>
                 </dict>
                 <!-- Logging Settings -->

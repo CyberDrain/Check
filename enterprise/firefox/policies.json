@@ -29,7 +29,8 @@
           "updateInterval": 24,
           "urlAllowlist": [],
           "domainSquatting": {
-            "enabled": false
+            "enabled": false,
+            "protectedDomains": []
           },
           "enableDebugLogging": false,
           "customBranding": {

@@ -120,7 +120,7 @@
             <string id="CheckGenericWebhookEnabled_Explain">
                 This policy controls whether the Check extension sends selected security events to a custom webhook endpoint.
                 
-                When enabled: Events listed in "Generic webhook event types" are sent to the configured Generic Webhook URL.
+                When enabled: Events listed in Generic webhook event types are sent to the configured Generic Webhook URL.
                 When disabled (default): No generic webhook events are sent.
                 
                 Note: Requires Generic Webhook URL and at least one event type.
@@ -144,6 +144,7 @@
                 - rogue_app_detected
                 - threat_detected
                 - validation_event
+                - domain_squatting_detected
             </string>
             <!-- Custom Rules URL -->
             <string id="CheckCustomRulesUrl">Custom detection rules URL</string>
@@ -278,6 +279,13 @@
                 
                 Debug logging should only be enabled for troubleshooting as it may impact performance and generate large log files.
             </string>
+            <string id="CheckDomainSquattingProtectedDomains">Domain squatting protected domains</string>
+            <string id="CheckDomainSquattingProtectedDomains_Explain">
+                This policy specifies the domains that domain squatting detection protects, such as your own and your clients' domains (for example contoso.com).
+
+                When set: only these domains are protected. Sites on the URL allowlist are still skipped, but lookalikes of them are not flagged.
+                When not configured: the domains in the URL allowlist are protected instead.
+            </string>
             <string id="CheckDomainSquattingEnabled">Enable domain squatting detection</string>
             <string id="CheckDomainSquattingEnabled_Explain">
                 This policy controls domain squatting detection in the Check extension.
@@ -294,6 +302,13 @@
                 When disabled (default): Only essential logging occurs.
                 
                 Debug logging should only be enabled for troubleshooting as it may impact performance and generate large log files.
+            </string>
+            <string id="CheckDomainSquattingProtectedDomainsChrome">Domain squatting protected domains (Chrome)</string>
+            <string id="CheckDomainSquattingProtectedDomainsChrome_Explain">
+                This policy specifies the domains that domain squatting detection protects in Google Chrome, such as your own and your clients' domains (for example contoso.com).
+
+                When set: only these domains are protected. Sites on the URL allowlist are still skipped, but lookalikes of them are not flagged.
+                When not configured: the domains in the URL allowlist are protected instead.
             </string>
             <string id="CheckDomainSquattingEnabledChrome">Enable domain squatting detection (Chrome)</string>
             <string id="CheckDomainSquattingEnabledChrome_Explain">
@@ -361,7 +376,7 @@
             <string id="CheckGenericWebhookEnabledChrome_Explain">
                 This policy controls whether the Check extension sends selected security events to a custom webhook endpoint in Google Chrome.
                 
-                When enabled: Events listed in "Generic webhook event types (Chrome)" are sent to the configured Generic Webhook URL.
+                When enabled: Events listed in Generic webhook event types (Chrome) are sent to the configured Generic Webhook URL.
                 When disabled (default): No generic webhook events are sent.
                 
                 Note: Requires Generic Webhook URL and at least one event type.
@@ -385,6 +400,7 @@
                 - rogue_app_detected
                 - threat_detected
                 - validation_event
+                - domain_squatting_detected
             </string>
             <!-- Custom Rules URL - Chrome -->
             <string id="CheckCustomRulesUrlChrome">Custom detection rules URL (Chrome)</string>
@@ -616,6 +632,12 @@
                 <textBox refId="LogoUrlChrome">
                     <label>Logo URL:</label>
                 </textBox>
+            </presentation>
+            <presentation id="CheckDomainSquattingProtectedDomains">
+                <listBox refId="ProtectedDomainsList">Protected domains:</listBox>
+            </presentation>
+            <presentation id="CheckDomainSquattingProtectedDomainsChrome">
+                <listBox refId="ProtectedDomainsListChrome">Protected domains:</listBox>
             </presentation>
             <presentation id="CheckUrlAllowlist">
                 <listBox refId="UrlAllowlistList">URL Allowlist (URLs with wildcards or regex patterns):</listBox>

@@ -19,7 +19,8 @@
                 "updateInterval": 24,
                 "enableDebugLogging": false,
                 "domainSquatting": {
-                    "enabled": true
+                    "enabled": true,
+                    "protectedDomains": []
                 },
                 "customBranding": {
                     "companyName": "",
