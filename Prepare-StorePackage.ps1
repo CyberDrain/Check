@@ -2,7 +2,7 @@
 # Creates a single universal package for both Chrome Web Store and Edge Add-ons
 
 param(
-    [string]$Version = '1.2.0',
+    [string]$Version = '1.3.0',
     [string]$OutputPath = 'store-packages'
 )
 
