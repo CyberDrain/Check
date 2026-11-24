@@ -103,7 +103,8 @@ export class DomainSquattingDetector {
         let cleaned = pattern.trim()
           .replace(/^\^/, '')  // Remove leading ^
           .replace(/\$$/, '')  // Remove trailing $
-          .replace(/\\/g, ''); // Remove escape characters
+          .replace(/\\/g, '') // Remove escape characters
+          .replace(/^(https?:\/\/)?\*\./, '$1'); // Leading wildcard subdomain (https://*.example.com/*)
         
         // Try to extract domain from URL pattern
         // Pattern formats:
@@ -565,15 +566,19 @@ export class DomainSquattingDetector {
   detectCombosquat(testDomain, protectedDomain) {
     const tokens = testDomain.split(/[-_]/);
     let extra;
+    let common;
     if (tokens.length > 1 && tokens.includes(protectedDomain)) {
       extra = tokens.filter(t => t && t !== protectedDomain);
+      common = extra.some(t => COMMON_COMBOS.includes(t));
     } else if (protectedDomain.length >= MIN_FUZZY_LENGTH && testDomain.includes(protectedDomain)) {
+      // Brands own many glued names (googleusercontent), so these only count next to a suspicious word
       extra = testDomain.split(protectedDomain).join('-').split(/[-_]/).filter(Boolean);
+      common = extra.some(t => COMMON_COMBOS.some(c => t.startsWith(c) || t.endsWith(c)));
+      if (!common) return null;
     } else {
       return null;
     }
 
-    const common = extra.some(t => COMMON_COMBOS.includes(t));
     return {
       technique: 'combosquat',
       description: common

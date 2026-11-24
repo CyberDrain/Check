@@ -44,3 +44,19 @@ test("allowlisted hosts and their subdomains are never flagged", async () => {
   assert.equal(d.checkDomain("eu.client.my.salesforce-setup.com"), null);
   assert.equal(d.checkDomain("other.salesforce-setup.com")?.detected, true);
 });
+
+test("wildcard allowlist patterns are read as domains", async () => {
+  const d = await detector({ urlAllowlist: ["https://*.contoso.com/*", "*.fabrikam.com"] });
+  assert.deepEqual(d.allowlistHosts, ["contoso.com", "fabrikam.com"]);
+  assert.equal(d.checkDomain("login.contoso.com"), null);
+  assert.equal(d.checkDomain("contosso.com")?.detected, true);
+});
+
+test("a brand's own glued names are not flagged", async () => {
+  const d = await detector({ domainSquatting: { protectedDomains: ["google.com"] } });
+  for (const host of ["lh3.googleusercontent.com", "www.googleadservices.com"]) {
+    assert.equal(d.checkDomain(host), null, host);
+  }
+  assert.equal(d.checkDomain("googlelogin.com")?.detected, true);
+  assert.equal(d.checkDomain("google-ads.com")?.detected, true);
+});
