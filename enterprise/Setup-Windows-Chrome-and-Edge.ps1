@@ -114,7 +114,12 @@ Write-Host ""
 
 $cfg_showNotifications = Read-Setting -Name "showNotifications" -Description "Show notifications (0 = Disabled, 1 = Enabled)" -Default "1" -Type "bool"
 $cfg_enableValidPageBadge = Read-Setting -Name "enableValidPageBadge" -Description "Show valid page badge (0 = Disabled, 1 = Enabled)" -Default "0" -Type "bool"
-$cfg_validPageBadgeTimeout = Read-Setting -Name "validPageBadgeTimeout" -Description "Seconds before the valid page badge hides (0-300, 0 = until dismissed)" -Default "5" -Type "int"
+do {
+    $cfg_validPageBadgeTimeout = Read-Setting -Name "validPageBadgeTimeout" -Description "Seconds before the valid page badge hides (0-300, 0 = until dismissed)" -Default "5" -Type "int"
+    if ($cfg_validPageBadgeTimeout -notmatch '^0*(?:[0-9]{1,2}|[12][0-9]{2}|300)$') {
+        Write-Host "  Valid page badge timeout must be between 0 and 300 seconds." -ForegroundColor Yellow
+    }
+} while ($cfg_validPageBadgeTimeout -notmatch '^0*(?:[0-9]{1,2}|[12][0-9]{2}|300)$')
 $cfg_enablePageBlocking = Read-Setting -Name "enablePageBlocking" -Description "Enable page blocking (0 = Disabled, 1 = Enabled)" -Default "1" -Type "bool"
 $cfg_forceToolbarPin = Read-Setting -Name "forceToolbarPin" -Description "Force pin extension to toolbar (0 = Not pinned, 1 = Force pinned)" -Default "1" -Type "bool"
 $cfg_updateInterval = Read-Setting -Name "updateInterval" -Description "Update interval in hours (1-168)" -Default "24" -Type "int"
