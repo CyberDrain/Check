@@ -6,29 +6,29 @@
 import { chrome, storage } from "../browser-polyfill.js";
 import logger from "../utils/logger.js";
 
-// Top-level sections of a rules file. A downloaded file must contain at least
-// one of them, so an error page or unrelated JSON response can't replace good
-// rules.
-const KNOWN_RULE_SECTIONS = [
-  "trusted_login_patterns",
-  "microsoft_domain_patterns",
-  "exclusion_system",
-  "legitimate_discussion_domains",
-  "m365_detection_requirements",
-  "blocking_rules",
-  "allow_rules",
-  "aad_detection_elements",
-  "required_elements",
-  "rules",
-  "thresholds",
-  "phishing_indicators",
-  "legitimate_patterns",
-  "suspicious_behaviors",
-  "detection_settings",
-  "detection_logic",
-  "rogue_apps_detection",
-  "domain_squatting",
-];
+// Top-level sections of a rules file and whether each is a list or an object.
+// A downloaded file must contain at least one of them, and every one it has must
+// be the right shape, so an error page or a malformed file can't replace good rules.
+const KNOWN_RULE_SECTIONS = {
+  trusted_login_patterns: "list",
+  microsoft_domain_patterns: "list",
+  exclusion_system: "object",
+  legitimate_discussion_domains: "list",
+  m365_detection_requirements: "object",
+  blocking_rules: "list",
+  allow_rules: "list",
+  aad_detection_elements: "list",
+  required_elements: "list",
+  rules: "list",
+  thresholds: "object",
+  phishing_indicators: "list",
+  legitimate_patterns: "list",
+  suspicious_behaviors: "list",
+  detection_settings: "object",
+  detection_logic: "object",
+  rogue_apps_detection: "object",
+  domain_squatting: "object",
+};
 
 // After a failed fetch, wait this long before trying again so an outage or
 // rate limit doesn't cause a request on every page load.
@@ -40,8 +40,17 @@ function isValidDetectionRules(rules) {
   if (!rules || typeof rules !== "object" || Array.isArray(rules)) {
     return false;
   }
-  return KNOWN_RULE_SECTIONS.some((section) =>
+  const sections = Object.keys(KNOWN_RULE_SECTIONS).filter((section) =>
     Object.prototype.hasOwnProperty.call(rules, section)
+  );
+  return (
+    sections.length > 0 &&
+    sections.every((section) => {
+      const value = rules[section];
+      return KNOWN_RULE_SECTIONS[section] === "list"
+        ? Array.isArray(value)
+        : !!value && typeof value === "object" && !Array.isArray(value);
+    })
   );
 }
 

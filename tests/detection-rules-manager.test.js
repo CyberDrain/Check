@@ -64,7 +64,8 @@ test('keeps an expired cache when the update fails', async (t) => {
     'network error': async () => { throw new TypeError('Failed to fetch'); },
     'HTTP 429': async () => jsonResponse({ message: 'rate limited' }, 429),
     'non-JSON response': async () => ({ ok: true, status: 200, json: async () => { throw new SyntaxError('Unexpected token <'); } }),
-    'JSON that is not a rules file': async () => jsonResponse({ message: 'Not Found' })
+    'JSON that is not a rules file': async () => jsonResponse({ message: 'Not Found' }),
+    'a rules section of the wrong type': async () => jsonResponse({ version: '2.0.0', phishing_indicators: {} })
   };
 
   for (const [name, handler] of Object.entries(failures)) {
